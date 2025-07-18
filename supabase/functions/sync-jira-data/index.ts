@@ -70,9 +70,14 @@ interface JiraIssue {
     }>;
     customfield_10014?: string; // Epic Link
     customfield_10016?: number; // Story Points
-    sprint?: {
+    sprint?: Array<{
+      id: number;
       name: string;
-    };
+      state: string;
+      boardId: number;
+      startDate: string;
+      endDate: string;
+    }>;
     parent?: {
       key: string;
     }; // Parent issue for sub-tasks
@@ -132,7 +137,7 @@ Deno.serve(async (req: Request) => {
 
     // Fetch issues from Jira - include potential start date fields and parent field for sub-tasks
     const jqlQuery = encodeURIComponent('order by created DESC');
-    const jiraApiUrl = `${jira_url}/rest/api/3/search?jql=${jqlQuery}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,startdate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,parent`;
+    const jiraApiUrl = `${jira_url}/rest/api/3/search?jql=${jqlQuery}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,startdate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent`;
 
     const jiraResponse = await fetch(jiraApiUrl, {
       method: 'GET',
@@ -165,10 +170,25 @@ Deno.serve(async (req: Request) => {
         .filter(Boolean) as string[];
 
       // Determine start date from multiple possible fields
-      const startDate = issue.fields.startdate || 
-                       issue.fields.customfield_10015 || 
-                       issue.fields.customfield_10020 || 
-                       null; // Don't fallback to created date for start_date
+      const startDate = (() => {
+        const candidates = [
+          issue.fields.startdate,
+          issue.fields.customfield_10015,
+          issue.fields.customfield_10020
+        ];
+        
+        // Find the first candidate that is a valid date string
+        for (const candidate of candidates) {
+          if (typeof candidate === 'string' && candidate.trim() !== '') {
+            // Additional check to ensure it's not a stringified object
+            if (!candidate.startsWith('[') && !candidate.startsWith('{')) {
+              return candidate;
+            }
+          }
+        }
+        
+        return null;
+      })();
 
       return {
         user_id: userId,
@@ -184,7 +204,7 @@ Deno.serve(async (req: Request) => {
         due_date: issue.fields.duedate || null,
         dependencies: dependencies,
         epic_link: issue.fields.customfield_10014 || null,
-        sprint: issue.fields.sprint?.name || null,
+        sprint: issue.fields.sprint && issue.fields.sprint.length > 0 ? issue.fields.sprint[0].name : null,
         parent_issue_key: issue.fields.parent?.key || null,
       };
     });
