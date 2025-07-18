@@ -20,6 +20,7 @@
 */
 
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
+import { parseISO, isValid } from 'npm:date-fns@3.0.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,25 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Helper function to safely parse date strings
+const parseDate = (dateString: any): string | null => {
+  if (!dateString || typeof dateString !== 'string') {
+    return null;
+  }
+  
+  // Check if it's a stringified JSON object
+  if (dateString.startsWith('[') || dateString.startsWith('{')) {
+    return null;
+  }
+  
+  try {
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed.toISOString() : null;
+  } catch {
+    return null;
+  }
+};
 
 interface SyncRequest {
   userId: string;
@@ -177,18 +197,20 @@ Deno.serve(async (req: Request) => {
           issue.fields.customfield_10020
         ];
         
-        // Find the first candidate that is a valid date string
         for (const candidate of candidates) {
-          if (typeof candidate === 'string' && candidate.trim() !== '') {
-            // Additional check to ensure it's not a stringified object
-            if (!candidate.startsWith('[') && !candidate.startsWith('{')) {
-              return candidate;
-            }
+          const parsed = parseDate(candidate);
+          if (parsed) {
+            return parsed;
           }
         }
         
         return null;
       })();
+
+      // Parse dates safely with fallbacks for required fields
+      const createdDate = parseDate(issue.fields.created) || new Date().toISOString();
+      const updatedDate = parseDate(issue.fields.updated) || new Date().toISOString();
+      const dueDate = parseDate(issue.fields.duedate);
 
       return {
         user_id: userId,
@@ -199,9 +221,9 @@ Deno.serve(async (req: Request) => {
         assignee: issue.fields.assignee?.displayName || null,
         labels: issue.fields.labels || [],
         start_date: startDate,
-        created_date: issue.fields.created,
-        updated_date: issue.fields.updated,
-        due_date: issue.fields.duedate || null,
+        created_date: createdDate,
+        updated_date: updatedDate,
+        due_date: dueDate,
         dependencies: dependencies,
         epic_link: issue.fields.customfield_10014 || null,
         sprint: issue.fields.sprint && issue.fields.sprint.length > 0 ? issue.fields.sprint[0].name : null,
