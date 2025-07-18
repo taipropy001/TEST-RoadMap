@@ -39,7 +39,7 @@ const parseDate = (dateString: any): string | null => {
     return null;
   }
   
-  // Check if it's a stringified JSON object
+  // Check if it's a stringified JSON object or array
   if (dateString.startsWith('[') || dateString.startsWith('{')) {
     return null;
   }
@@ -189,7 +189,7 @@ Deno.serve(async (req: Request) => {
         .map(link => link.inwardIssue?.key || link.outwardIssue?.key)
         .filter(Boolean) as string[];
 
-      // Determine start date from multiple possible fields
+      // Determine start date from multiple possible fields - ensure we only check string values
       const startDate = (() => {
         const candidates = [
           issue.fields.startdate,
@@ -198,9 +198,12 @@ Deno.serve(async (req: Request) => {
         ];
         
         for (const candidate of candidates) {
-          const parsed = parseDate(candidate);
-          if (parsed) {
-            return parsed;
+          // Only process if it's a string and not a stringified object/array
+          if (typeof candidate === 'string' && !candidate.startsWith('[') && !candidate.startsWith('{')) {
+            const parsed = parseDate(candidate);
+            if (parsed) {
+              return parsed;
+            }
           }
         }
         
@@ -226,7 +229,7 @@ Deno.serve(async (req: Request) => {
         due_date: dueDate,
         dependencies: dependencies,
         epic_link: issue.fields.customfield_10014 || null,
-        sprint: issue.fields.sprint && issue.fields.sprint.length > 0 ? issue.fields.sprint[0].name : null,
+        sprint: issue.fields.sprint && Array.isArray(issue.fields.sprint) && issue.fields.sprint.length > 0 ? issue.fields.sprint[0].name : null,
         parent_issue_key: issue.fields.parent?.key || null,
       };
     });
