@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Save, Plus, X } from 'lucide-react';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
-import { useAuth } from '../../contexts/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -23,7 +22,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [roadmapName, setRoadmapName] = useState('');
   const [saving, setSaving] = useState(false);
-  const { user } = useAuth();
 
   // Extract unique values from tickets
   const uniqueLabels = Array.from(new Set(tickets.flatMap(t => t.labels))).sort();

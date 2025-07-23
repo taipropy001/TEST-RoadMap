@@ -4,7 +4,6 @@ import { FilterPanel } from './FilterPanel';
 import { Timeline } from './Timeline';
 import { JiraSetup } from '../Setup/JiraSetup';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
-import { useAuth } from '../../contexts/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -18,13 +17,11 @@ export const Dashboard: React.FC = () => {
   const [hasJiraSetup, setHasJiraSetup] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { user } = useAuth();
-
   useEffect(() => {
     checkJiraSetup();
     loadTickets();
     loadSavedRoadmaps();
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     applyFilters();

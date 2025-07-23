@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, ExternalLink, Check, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { UserProfile } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -17,13 +15,10 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  const { user } = useAuth();
 
   useEffect(() => {
     loadProfile();
-  }, [user]);
+  }, []);
 
   const loadProfile = async () => {
 
@@ -211,6 +206,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
               className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Saving...' : profile ? 'Update Configuration' : 'Save Configuration'}
+              {loading ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>
         </form>
