@@ -22,29 +22,18 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
+    loadProfile();
   }, [user]);
 
   const loadProfile = async () => {
-    if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/user/profile`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setProfile(data);
-          setJiraUrl(data.jira_url || '');
-          setJiraEmail(data.jira_email || '');
-          setJiraApiToken(data.jira_api_token || '');
-        }
+      const savedConfig = localStorage.getItem('jira_config');
+      if (savedConfig) {
+        const data = JSON.parse(savedConfig);
+        setJiraUrl(data.jira_url || '');
+        setJiraEmail(data.jira_username || data.jira_email || ''); // Support both old and new format
+        setJiraApiToken(data.jira_api_token || '');
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -57,25 +46,37 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
     setSuccess('');
 
     try {
+      // Clean URL - remove trailing slash
+      const cleanUrl = jiraUrl.replace(/\/$/, '');
+      
+      // For on-premise Jira, test with /rest/api/2/myself endpoint
+      const testUrl = `${cleanUrl}/rest/api/2/myself`;
+      const auth = btoa(`${jiraEmail}:${jiraApiToken}`);
+
       const response = await fetch(`${API_URL}/jira/test-connection`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Basic ${auth}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          baseUrl: jiraUrl,
-          email: jiraEmail,
-          apiToken: jiraApiToken,
-        }),
       });
 
-      const result = await response.json();
-
       if (response.ok) {
+        const result = await response.json();
         setSuccess('Connection successful! Your Jira credentials are valid.');
       } else {
-        setError(result.error || 'Failed to connect to Jira');
+        let errorMessage = 'Failed to connect to Jira';
+        
+        if (response.status === 401) {
+          errorMessage = 'Invalid credentials. Please check your username and password.';
+        } else if (response.status === 403) {
+          errorMessage = 'Access denied. Please check your Jira permissions.';
+        } else if (response.status === 404) {
+          errorMessage = 'Jira server not found. Please check your URL.';
+        }
+        
+        setError(errorMessage);
       }
     } catch (err) {
       setError('Failed to test connection');
@@ -89,27 +90,16 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
     setLoading(true);
     setError('');
 
-    if (!user) return;
 
     try {
       const profileData = {
         jira_url: jiraUrl,
-        jira_email: jiraEmail,
+        jira_username: jiraEmail, // Using jiraEmail variable for username
         jira_api_token: jiraApiToken,
       };
 
-      const response = await fetch(`${API_URL}/user/profile`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save configuration');
-      }
+      // Save to localStorage instead of server
+      localStorage.setItem('jira_config', JSON.stringify(profileData));
 
       onComplete();
     } catch (err) {
@@ -136,20 +126,12 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <h3 className="font-medium text-blue-900">How to get your API token:</h3>
+              <h3 className="font-medium text-blue-900">Jira On-Premise Authentication:</h3>
               <ol className="text-sm text-blue-800 mt-2 space-y-1 list-decimal list-inside">
-                <li>Go to your Atlassian account settings</li>
-                <li>Navigate to Security → API tokens</li>
-                <li>Create a new API token and copy it</li>
+                <li>Use your Jira username and password</li>
+                <li>Or create a Personal Access Token in Jira settings</li>
+                <li>Enter your Jira server URL (e.g., http://jira.company.com)</li>
               </ol>
-              <a
-                href="https://id.atlassian.com/manage-profile/security/api-tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
-              >
-                Open Atlassian API tokens <ExternalLink className="w-4 h-4 ml-1" />
-              </a>
             </div>
           </div>
         </div>
@@ -157,7 +139,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="jiraUrl" className="block text-sm font-medium text-gray-700 mb-2">
-              Jira Cloud URL
+              Jira Server URL
             </label>
             <input
               id="jiraUrl"
@@ -165,29 +147,29 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
               value={jiraUrl}
               onChange={(e) => setJiraUrl(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="https://yourcompany.atlassian.net"
+              placeholder="http://jira.yourcompany.com or https://jira.yourcompany.com"
               required
             />
           </div>
 
           <div>
             <label htmlFor="jiraEmail" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Username
             </label>
             <input
-              id="jiraEmail"
-              type="email"
+              id="jiraUsername"
+              type="text"
               value={jiraEmail}
               onChange={(e) => setJiraEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="your@email.com"
+              placeholder="your.username"
               required
             />
           </div>
 
           <div>
             <label htmlFor="jiraApiToken" className="block text-sm font-medium text-gray-700 mb-2">
-              API Token
+              Password / Personal Access Token
             </label>
             <input
               id="jiraApiToken"
@@ -195,7 +177,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
               value={jiraApiToken}
               onChange={(e) => setJiraApiToken(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Your Jira API token"
+              placeholder="Your password or Personal Access Token"
               required
             />
           </div>

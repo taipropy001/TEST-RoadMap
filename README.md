@@ -2,121 +2,122 @@
 
 ## Features
 A modern web application for visualizing Jira project roadmaps with timeline views, filtering capabilities, and export features.
-- **Jira Integration**: Connect to your Jira Cloud instance
+
+- **Jira Integration**: Connect to your Jira on-premise server
 - **Timeline Visualization**: Interactive Gantt-style timeline view
 - **Advanced Filtering**: Filter by labels, assignees, status, and date ranges
 - **Roadmap Management**: Save and manage multiple roadmap configurations
 - **Export Capabilities**: Export timelines as PNG images or shareable links
 - **Hierarchical View**: Support for epics, stories, and sub-tasks
+- **No Authentication Required**: Simple setup without user accounts
+
 ## Technology Stack
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
-- **Backend**: Node.js, Express, SQL Server
-- **Authentication**: JWT-based authentication
-- **Database**: Microsoft SQL Server
+- **Storage**: Browser localStorage (no backend required)
 - **Icons**: Lucide React
+
 ## Prerequisites
 - Node.js 18+ and npm
-- Microsoft SQL Server (local or remote instance)
-- Jira Cloud instance with API access
+- Jira on-premise server with API access
+
 ## Setup Instructions
-### 1. Database Setup
-Create a SQL Server database named `jira_roadmap`. The application will automatically create the required tables on first run.
-### 2. Environment Configuration
-Copy `.env.example` to `.env` and configure your settings:
-```bash
-# SQL Server Configuration
-SQL_SERVER_HOST=localhost
-SQL_SERVER_PORT=1433
-SQL_SERVER_DATABASE=jira_roadmap
-SQL_SERVER_USER=sa
-SQL_SERVER_PASSWORD=your_password
-SQL_SERVER_ENCRYPT=false
-SQL_SERVER_TRUST_CERT=true
 
-# JWT Secret for authentication
-JWT_SECRET=your-jwt-secret-key
-
-# Server port
-PORT=3001
-
-# Frontend API URL
-VITE_API_URL=http://localhost:3001/api
-```
-### 3. Install Dependencies
+### 1. Install Dependencies
 ```bash
 npm install
 ```
-### 4. Start the Application
-Run both the backend server and frontend development server:
+
+### 2. Start the Application
 ```bash
-npm run dev:full
-```
-Or run them separately:
-```bash
-# Terminal 1 - Backend server
-npm run server
-# Terminal 2 - Frontend development server
 npm run dev
 ```
-### 5. Jira API Setup
-1. Go to your Atlassian account settings
-2. Navigate to Security → API tokens
-3. Create a new API token
-4. Use your Jira Cloud URL (e.g., `https://yourcompany.atlassian.net`)
-5. Configure these in the application's Jira setup page
+
+### 3. Configure Jira Connection
+1. Open the application in your browser
+2. Enter your Jira server details:
+   - **Jira Server URL**: Your on-premise Jira URL (e.g., `http://jira.company.com`)
+   - **Username**: Your Jira username
+   - **Password/Token**: Your password or Personal Access Token
+
+### 4. Sync and Visualize
+1. Test your connection to ensure credentials are correct
+2. Save the configuration
+3. Click "Sync" to import your Jira tickets
+4. Use filters to create custom roadmap views
+5. Export or share your roadmaps as needed
+
+## Jira On-Premise Configuration
+
+### Authentication Options
+1. **Username/Password**: Use your regular Jira login credentials
+2. **Personal Access Token**: Create a PAT in Jira for enhanced security
+
+### API Endpoints Used
+- `/rest/api/2/myself` - Test connection and validate credentials
+- `/rest/api/2/search` - Fetch issues with JQL queries
+
+### Custom Fields
+The application attempts to extract start dates from common custom fields:
+- `customfield_10015` - Start Date
+- `customfield_10020` - Alternative Start Date
+- `customfield_10014` - Epic Link
+- `customfield_10016` - Sprint
+
+You may need to adjust these field IDs based on your Jira configuration.
+
 ## Usage
-1. **Sign Up/Sign In**: Create an account or sign in to an existing one
-2. **Configure Jira**: Enter your Jira Cloud URL, email, and API token
-3. **Sync Data**: Click the sync button to import your Jira tickets
-4. **Create Roadmaps**: Use filters to create custom roadmap views
-5. **Export**: Share or export your roadmaps as needed
-## API Endpoints
-### Authentication
-- `POST /api/auth/signup` - Create new user account
-- `POST /api/auth/signin` - Sign in user
 
-### User Profile
-- `GET /api/user/profile` - Get user's Jira configuration
-- `POST /api/user/profile` - Save/update Jira configuration
+1. **First Setup**: Configure your Jira server connection
+2. **Sync Data**: Import tickets from your Jira instance
+3. **Create Views**: Use filters to focus on specific projects, teams, or timeframes
+4. **Save Roadmaps**: Save frequently used filter combinations
+5. **Export**: Generate PNG images or shareable links of your roadmaps
 
-### Tickets
-- `GET /api/tickets` - Get user's synced tickets
+## Data Storage
 
-### Roadmaps
-- `GET /api/roadmaps` - Get saved roadmaps
-- `POST /api/roadmaps` - Create new roadmap
-- `DELETE /api/roadmaps/:id` - Delete roadmap
+All data is stored locally in your browser:
+- **Jira Configuration**: Stored in localStorage as `jira_config`
+- **Synced Tickets**: Stored in localStorage as `jira_tickets`
+- **Saved Roadmaps**: Stored in localStorage as `saved_roadmaps`
 
-### Jira Integration
-- `POST /api/jira/test-connection` - Test Jira API connection
-- `POST /api/jira/sync` - Sync tickets from Jira
+No data is sent to external servers except for direct communication with your Jira instance.
 
-## Database Schema
-The application uses the following main tables:
-- `users` - User accounts and authentication
-- `user_profiles` - Jira configuration per user
-- `tickets` - Synced Jira ticket data
-- `roadmaps` - Saved roadmap configurations
 ## Development
+
 ### Project Structure
 ```
 ├── src/
 │   ├── components/     # React components
-│   ├── contexts/       # React contexts (Auth)
-│   ├── lib/           # Utility libraries
-│   └── types/         # TypeScript type definitions
-├── server/            # Node.js backend server
+│   ├── types/         # TypeScript type definitions
+│   └── lib/           # Utility libraries
 └── public/           # Static assets
 ```
+
 ### Building for Production
 ```bash
 npm run build
 ```
+
+## Troubleshooting
+
+### Connection Issues
+- Verify your Jira server URL is accessible
+- Check that your username/password are correct
+- Ensure your Jira instance allows API access
+- Try using a Personal Access Token instead of password
+
+### Custom Fields
+If start dates or other fields aren't displaying correctly:
+1. Check your Jira custom field configuration
+2. Update the custom field IDs in the sync logic
+3. Contact your Jira administrator for field mappings
+
 ## Contributing
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
+
 ## License
 This project is licensed under the MIT License.

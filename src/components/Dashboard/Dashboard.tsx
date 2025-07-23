@@ -21,11 +21,9 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      checkJiraSetup();
-      loadTickets();
-      loadSavedRoadmaps();
-    }
+    checkJiraSetup();
+    loadTickets();
+    loadSavedRoadmaps();
   }, [user]);
 
   useEffect(() => {
@@ -33,21 +31,10 @@ export const Dashboard: React.FC = () => {
   }, [tickets, filters]);
 
   const checkJiraSetup = async () => {
-    if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/user/profile`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setHasJiraSetup(!!(data && data.jira_api_token));
-      } else {
-        setHasJiraSetup(false);
-      }
+      const jiraConfig = localStorage.getItem('jira_config');
+      setHasJiraSetup(!!jiraConfig);
     } catch (error) {
       console.error('Failed to check Jira setup:', error);
       setHasJiraSetup(false);
@@ -56,20 +43,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const loadTickets = async () => {
-    if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/tickets`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const savedTickets = localStorage.getItem('jira_tickets');
+      if (savedTickets) {
+        const data = JSON.parse(savedTickets);
         setTickets(data || []);
-      } else {
-        console.error('Failed to load tickets');
       }
     } catch (error) {
       console.error('Failed to load tickets:', error);
@@ -77,20 +56,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const loadSavedRoadmaps = async () => {
-    if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/roadmaps`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const savedRoadmaps = localStorage.getItem('saved_roadmaps');
+      if (savedRoadmaps) {
+        const data = JSON.parse(savedRoadmaps);
         setSavedRoadmaps(data || []);
-      } else {
-        console.error('Failed to load roadmaps');
       }
     } catch (error) {
       console.error('Failed to load roadmaps:', error);
@@ -136,22 +107,106 @@ export const Dashboard: React.FC = () => {
   };
 
   const syncJiraData = async () => {
-    if (!user) return;
+    const jiraConfig = localStorage.getItem('jira_config');
+    if (!jiraConfig) {
+      console.error('No Jira configuration found');
+      return;
+    }
 
     setSyncing(true);
     try {
-      const response = await fetch(`${API_URL}/jira/sync`, {
-        method: 'POST',
+      const config = JSON.parse(jiraConfig);
+      const { jira_url, jira_username, jira_api_token } = config;
+      
+      // Clean URL
+      const cleanUrl = jira_url.replace(/\/$/, '');
+      
+      // For on-premise Jira, use /rest/api/2/search endpoint
+      const jqlQuery = encodeURIComponent('order by created DESC');
+      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${jqlQuery}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent`;
+      
+      const auth = btoa(`${jira_username}:${jira_api_token}`);
+      
+      const response = await fetch(jiraApiUrl, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Basic ${auth}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
-        await loadTickets();
+        const jiraData = await response.json();
+        const issues = jiraData.issues || [];
+        
+        // Transform Jira issues to our ticket format
+        const transformedTickets = issues.map((issue: any) => {
+          // Extract dependencies from issue links
+          const dependencies = (issue.fields.issuelinks || [])
+            .filter((link: any) => link.type.name === 'Blocks' || link.type.name === 'Dependency')
+            .map((link: any) => link.inwardIssue?.key || link.outwardIssue?.key)
+            .filter(Boolean);
+
+          // Determine start date from multiple possible fields
+          const startDate = (() => {
+            const candidates = [
+              issue.fields.customfield_10015, // Start date custom field
+              issue.fields.customfield_10020, // Another possible start date field
+              issue.fields.created // Fallback to created date
+            ];
+            
+            for (const candidate of candidates) {
+              if (typeof candidate === 'string' && candidate.trim()) {
+                try {
+                  const parsed = new Date(candidate);
+                  if (!isNaN(parsed.getTime())) {
+                    return candidate;
+                  }
+                } catch {
+                  continue;
+                }
+              }
+            }
+            
+            return issue.fields.created; // Default fallback
+          })();
+
+          // Extract sprint name safely
+          const sprintName = (() => {
+            const sprint = issue.fields.customfield_10016; // Sprint field
+            if (Array.isArray(sprint) && sprint.length > 0) {
+              return sprint[0].name || null;
+            }
+            return null;
+          })();
+
+          return {
+            id: issue.id,
+            user_id: 'local', // Since we don't have users anymore
+            jira_id: issue.id,
+            key: issue.key,
+            summary: issue.fields.summary,
+            status: issue.fields.status.name,
+            assignee: issue.fields.assignee?.displayName || null,
+            labels: issue.fields.labels || [],
+            start_date: startDate,
+            created_date: issue.fields.created,
+            updated_date: issue.fields.updated,
+            due_date: issue.fields.duedate || null,
+            dependencies,
+            epic_link: issue.fields.customfield_10014 || null, // Epic Link
+            sprint: sprintName,
+            parent_issue_key: issue.fields.parent?.key || null,
+            created_at: new Date().toISOString(),
+          };
+        });
+        
+        // Save to localStorage
+        localStorage.setItem('jira_tickets', JSON.stringify(transformedTickets));
+        setTickets(transformedTickets);
       } else {
-        console.error('Failed to sync Jira data');
+        throw new Error('Failed to fetch data from Jira');
       }
     } catch (error) {
       console.error('Failed to sync Jira data:', error);

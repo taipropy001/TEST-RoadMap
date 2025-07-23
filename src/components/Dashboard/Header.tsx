@@ -1,6 +1,5 @@
 import React from 'react';
-import { LogOut, User, Settings, RefreshCw } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Settings, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -9,7 +8,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onSync, syncing }) => {
-  const { user, signOut } = useAuth();
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -43,25 +41,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onSync, syncing 
             <Settings className="w-4 h-4" />
             <span className="text-sm font-medium">Settings</span>
           </button>
-
-          <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
-            <div className="flex items-center space-x-2">
-              <div className="bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">
-                {user?.email?.split('@')[0]}
-              </span>
-            </div>
-            
-            <button
-              onClick={signOut}
-              className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Sign Out</span>
-            </button>
-          </div>
         </div>
       </div>
     </header>

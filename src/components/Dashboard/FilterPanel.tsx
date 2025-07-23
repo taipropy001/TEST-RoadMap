@@ -31,25 +31,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status))).sort();
 
   const saveRoadmap = async () => {
-    if (!user || !roadmapName.trim()) return;
+    if (!roadmapName.trim()) return;
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/roadmaps`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: roadmapName.trim(),
-          filters,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save roadmap');
-      }
+      const newRoadmap = {
+        id: Date.now().toString(), // Simple ID generation
+        name: roadmapName.trim(),
+        filters,
+        created_at: new Date().toISOString(),
+      };
+      
+      const existingRoadmaps = JSON.parse(localStorage.getItem('saved_roadmaps') || '[]');
+      const updatedRoadmaps = [...existingRoadmaps, newRoadmap];
+      localStorage.setItem('saved_roadmaps', JSON.stringify(updatedRoadmaps));
 
       setShowSaveModal(false);
       setRoadmapName('');
@@ -67,16 +62,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
   const deleteRoadmap = async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}/roadmaps/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete roadmap');
-      }
+      const existingRoadmaps = JSON.parse(localStorage.getItem('saved_roadmaps') || '[]');
+      const updatedRoadmaps = existingRoadmaps.filter((roadmap: any) => roadmap.id !== id);
+      localStorage.setItem('saved_roadmaps', JSON.stringify(updatedRoadmaps));
 
       onRoadmapsChange();
     } catch (err) {
