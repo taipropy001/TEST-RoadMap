@@ -1,26 +1,21 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { SignupForm } from './components/Auth/SignupForm';
+import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard/Dashboard';
+import { JiraSetup } from './components/Setup/JiraSetup';
 
-const AuthPage: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+function App() {
+  const [hasJiraSetup, setHasJiraSetup] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      {isLogin ? (
-        <LoginForm onToggleMode={() => setIsLogin(false)} />
-      ) : (
-        <SignupForm onToggleMode={() => setIsLogin(true)} />
-      )}
-    </div>
-  );
-};
+  useEffect(() => {
+    // Check if Jira configuration exists in localStorage
+    const jiraConfig = localStorage.getItem('jira_config');
+    setHasJiraSetup(!!jiraConfig);
+    setLoading(false);
+  }, []);
 
-const AppContent: React.FC = () => {
-  const { user, loading } = useAuth();
+  const handleJiraSetupComplete = () => {
+    setHasJiraSetup(true);
+  };
 
   if (loading) {
     return (
@@ -33,29 +28,11 @@ const AppContent: React.FC = () => {
     );
   }
 
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={user ? <Dashboard /> : <Navigate to="/auth" replace />}
-      />
-      <Route
-        path="/auth"
-        element={!user ? <AuthPage /> : <Navigate to="/" replace />}
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-};
+  if (!hasJiraSetup) {
+    return <JiraSetup onComplete={handleJiraSetupComplete} />;
+  }
 
-function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
-  );
+  return <Dashboard />;
 }
 
 export default App;
