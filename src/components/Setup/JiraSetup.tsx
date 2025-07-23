@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, ExternalLink, Check, AlertCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserProfile } from '../../types';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface JiraSetupProps {
   onComplete: () => void;
@@ -29,17 +30,24 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
   const loadProfile = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    try {
+      const response = await fetch(`${API_URL}/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
 
-    if (data) {
-      setProfile(data);
-      setJiraUrl(data.jira_url || '');
-      setJiraEmail(data.jira_email || '');
-      setJiraApiToken(data.jira_api_token || '');
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          setProfile(data);
+          setJiraUrl(data.jira_url || '');
+          setJiraEmail(data.jira_email || '');
+          setJiraApiToken(data.jira_api_token || '');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
     }
   };
 
@@ -49,10 +57,10 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
     setSuccess('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-jira-connection`, {
+      const response = await fetch(`${API_URL}/jira/test-connection`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -85,25 +93,22 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
 
     try {
       const profileData = {
-        user_id: user.id,
         jira_url: jiraUrl,
         jira_email: jiraEmail,
         jira_api_token: jiraApiToken,
       };
 
-      if (profile) {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update(profileData)
-          .eq('id', profile.id);
-        
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_profiles')
-          .insert([profileData]);
-        
-        if (error) throw error;
+      const response = await fetch(`${API_URL}/user/profile`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save configuration');
       }
 
       onComplete();

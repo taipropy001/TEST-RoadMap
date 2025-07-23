@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Save, Plus, X } from 'lucide-react';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface FilterPanelProps {
   tickets: JiraTicket[];
@@ -34,15 +35,21 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('roadmaps')
-        .insert([{
-          user_id: user.id,
+      const response = await fetch(`${API_URL}/roadmaps`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: roadmapName.trim(),
           filters,
-        }]);
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to save roadmap');
+      }
 
       setShowSaveModal(false);
       setRoadmapName('');
@@ -60,12 +67,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
   const deleteRoadmap = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('roadmaps')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(`${API_URL}/roadmaps/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete roadmap');
+      }
+
       onRoadmapsChange();
     } catch (err) {
       console.error('Failed to delete roadmap:', err);

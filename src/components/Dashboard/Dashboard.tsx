@@ -4,8 +4,9 @@ import { FilterPanel } from './FilterPanel';
 import { Timeline } from './Timeline';
 import { JiraSetup } from '../Setup/JiraSetup';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<JiraTicket[]>([]);
@@ -34,16 +35,22 @@ export const Dashboard: React.FC = () => {
   const checkJiraSetup = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('jira_api_token')
-      .eq('user_id', user.id);
+    try {
+      const response = await fetch(`${API_URL}/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
 
-    if (error) {
+      if (response.ok) {
+        const data = await response.json();
+        setHasJiraSetup(!!(data && data.jira_api_token));
+      } else {
+        setHasJiraSetup(false);
+      }
+    } catch (error) {
       console.error('Failed to check Jira setup:', error);
       setHasJiraSetup(false);
-    } else {
-      setHasJiraSetup(!!(data && data.length > 0 && data[0]?.jira_api_token));
     }
     setLoading(false);
   };
@@ -51,32 +58,42 @@ export const Dashboard: React.FC = () => {
   const loadTickets = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_date', { ascending: true });
+    try {
+      const response = await fetch(`${API_URL}/tickets`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
 
-    if (error) {
+      if (response.ok) {
+        const data = await response.json();
+        setTickets(data || []);
+      } else {
+        console.error('Failed to load tickets');
+      }
+    } catch (error) {
       console.error('Failed to load tickets:', error);
-    } else {
-      setTickets(data || []);
     }
   };
 
   const loadSavedRoadmaps = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('roadmaps')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const response = await fetch(`${API_URL}/roadmaps`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
 
-    if (error) {
+      if (response.ok) {
+        const data = await response.json();
+        setSavedRoadmaps(data || []);
+      } else {
+        console.error('Failed to load roadmaps');
+      }
+    } catch (error) {
       console.error('Failed to load roadmaps:', error);
-    } else {
-      setSavedRoadmaps(data || []);
     }
   };
 
@@ -123,13 +140,12 @@ export const Dashboard: React.FC = () => {
 
     setSyncing(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-jira-data`, {
+      const response = await fetch(`${API_URL}/jira/sync`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
       });
 
       if (response.ok) {
