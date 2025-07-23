@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Filter, Save, Plus, X } from 'lucide-react';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 interface FilterPanelProps {
   tickets: JiraTicket[];
   filters: RoadmapFilters;
@@ -37,7 +35,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         id: Date.now().toString(), // Simple ID generation
         name: roadmapName.trim(),
         filters,
-        created_at: new Date().toISOString(),
       };
       
       const existingRoadmaps = JSON.parse(localStorage.getItem('saved_roadmaps') || '[]');

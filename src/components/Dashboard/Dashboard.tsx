@@ -5,8 +5,6 @@ import { Timeline } from './Timeline';
 import { JiraSetup } from '../Setup/JiraSetup';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 export const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<JiraTicket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<JiraTicket[]>([]);
@@ -28,7 +26,6 @@ export const Dashboard: React.FC = () => {
   }, [tickets, filters]);
 
   const checkJiraSetup = async () => {
-
     try {
       const jiraConfig = localStorage.getItem('jira_config');
       setHasJiraSetup(!!jiraConfig);
@@ -40,7 +37,6 @@ export const Dashboard: React.FC = () => {
   };
 
   const loadTickets = async () => {
-
     try {
       const savedTickets = localStorage.getItem('jira_tickets');
       if (savedTickets) {
@@ -53,7 +49,6 @@ export const Dashboard: React.FC = () => {
   };
 
   const loadSavedRoadmaps = async () => {
-
     try {
       const savedRoadmaps = localStorage.getItem('saved_roadmaps');
       if (savedRoadmaps) {
@@ -180,7 +175,6 @@ export const Dashboard: React.FC = () => {
 
           return {
             id: issue.id,
-            user_id: 'local', // Since we don't have users anymore
             jira_id: issue.id,
             key: issue.key,
             summary: issue.fields.summary,
@@ -195,7 +189,6 @@ export const Dashboard: React.FC = () => {
             epic_link: issue.fields.customfield_10014 || null, // Epic Link
             sprint: sprintName,
             parent_issue_key: issue.fields.parent?.key || null,
-            created_at: new Date().toISOString(),
           };
         });
         

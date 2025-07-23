@@ -12,13 +12,8 @@ A modern web application for visualizing Jira project roadmaps with timeline vie
 - **No Authentication Required**: Simple setup without user accounts
 
 ## Technology Stack
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
-- **Storage**: Browser localStorage (no backend required)
-- **Icons**: Lucide React
 
 ## Prerequisites
-- Node.js 18+ and npm
-- Jira on-premise server with API access
 
 ## Setup Instructions
 

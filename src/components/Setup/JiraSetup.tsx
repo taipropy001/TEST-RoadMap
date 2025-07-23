@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, ExternalLink, Check, AlertCircle } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 interface JiraSetupProps {
   onComplete: () => void;
 }
@@ -48,7 +46,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
       const testUrl = `${cleanUrl}/rest/api/2/myself`;
       const auth = btoa(`${jiraEmail}:${jiraApiToken}`);
 
-      const response = await fetch(`${API_URL}/jira/test-connection`, {
+      const response = await fetch(testUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -84,7 +82,6 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
 
     try {
       const profileData = {
