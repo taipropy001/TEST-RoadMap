@@ -133,7 +133,7 @@ export const Dashboard: React.FC = () => {
         jqlQuery = 'ORDER BY created DESC';
       }
       
-      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${jqlQuery}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent`;
+      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent,project`;
       
       const auth = btoa(`${jira_username}:${jira_api_token}`);
       
@@ -142,7 +142,6 @@ export const Dashboard: React.FC = () => {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
         },
       });
 
@@ -218,10 +217,14 @@ export const Dashboard: React.FC = () => {
         localStorage.setItem('jira_tickets', JSON.stringify(transformedTickets));
         setTickets(transformedTickets);
       } else {
-        throw new Error('Failed to fetch data from Jira');
+        const errorText = await response.text();
+        console.error('Jira API Error:', response.status, errorText);
+        throw new Error(`Failed to fetch data from Jira (${response.status}): ${errorText}`);
       }
     } catch (error) {
       console.error('Failed to sync Jira data:', error);
+      // You might want to show this error to the user
+      alert(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSyncing(false);
     }

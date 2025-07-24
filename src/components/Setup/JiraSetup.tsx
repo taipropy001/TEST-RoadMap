@@ -44,22 +44,21 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
       // Clean URL - remove trailing slash
       const cleanUrl = jiraUrl.replace(/\/$/, '');
       
-      // For on-premise Jira, test with /rest/api/2/myself endpoint
+      // Test with /rest/api/2/myself endpoint using GET method
       const testUrl = `${cleanUrl}/rest/api/2/myself`;
       const auth = btoa(`${jiraEmail}:${jiraApiToken}`);
 
       const response = await fetch(testUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
         const result = await response.json();
-        setSuccess('Connection successful! Your Jira credentials are valid.');
+        setSuccess(`Connection successful! Connected as: ${result.displayName || result.name || 'User'}`);
       } else {
         let errorMessage = 'Failed to connect to Jira';
         
@@ -69,12 +68,19 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
           errorMessage = 'Access denied. Please check your Jira permissions.';
         } else if (response.status === 404) {
           errorMessage = 'Jira server not found. Please check your URL.';
+        } else if (response.status === 0) {
+          errorMessage = 'Network error. Check if Jira server is accessible and CORS is configured.';
         }
         
-        setError(errorMessage);
+        setError(`${errorMessage} (Status: ${response.status})`);
       }
     } catch (err) {
-      setError('Failed to test connection');
+      console.error('Connection test error:', err);
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Network error: Cannot reach Jira server. Please check the URL and ensure the server is accessible.');
+      } else {
+        setError(`Connection failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
     } finally {
       setTesting(false);
     }
@@ -121,11 +127,13 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <h3 className="font-medium text-blue-900">Jira On-Premise Authentication:</h3>
+              <h3 className="font-medium text-blue-900">Jira Authentication Setup:</h3>
               <ol className="text-sm text-blue-800 mt-2 space-y-1 list-decimal list-inside">
-                <li>Use your Jira username and password</li>
-                <li>Or create a Personal Access Token in Jira settings</li>
-                <li>Enter your Jira server URL (e.g., http://jira.company.com)</li>
+                <li>Enter your complete Jira server URL (including http:// or https://)</li>
+                <li>Use your Jira username (not email for on-premise)</li>
+                <li>Use your password or Personal Access Token</li>
+                <li>Ensure your Jira server allows API access and CORS if needed</li>
+                <li>Test connection before saving to verify credentials</li>
               </ol>
             </div>
           </div>
