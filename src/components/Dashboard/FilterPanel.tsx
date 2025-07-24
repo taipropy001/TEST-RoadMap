@@ -25,6 +25,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const uniqueLabels = Array.from(new Set(tickets.flatMap(t => t.labels))).sort();
   const uniqueAssignees = Array.from(new Set(tickets.map(t => t.assignee).filter(Boolean))).sort();
   const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status))).sort();
+  const uniqueProjects = Array.from(new Set(tickets.map(t => t.project_key))).sort();
 
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
@@ -108,6 +109,29 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
           </div>
         )}
+
+        {/* Labels Filter */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Projects</h3>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {uniqueProjects.map((project) => (
+              <label key={project} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={filters.projects?.includes(project) || false}
+                  onChange={(e) => {
+                    const newProjects = e.target.checked
+                      ? [...(filters.projects || []), project]
+                      : (filters.projects || []).filter(p => p !== project);
+                    onFiltersChange({ ...filters, projects: newProjects });
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700 font-mono">{project}</span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         {/* Labels Filter */}
         <div>

@@ -341,6 +341,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900 break-words">{parentTicket.key}</div>
+                                <div className="text-xs text-gray-500 font-mono">{parentTicket.project_key}</div>
                                 <div className={`text-sm text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
                                   {parentTicket.summary}
                                 </div>
@@ -398,6 +399,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="text-sm font-medium text-gray-800 break-words">{subTask.key}</div>
+                                  <div className="text-xs text-gray-500 font-mono">{subTask.project_key}</div>
                                   <div className={`text-xs text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
                                     {subTask.summary}
                                   </div>

@@ -2,6 +2,7 @@ export interface JiraTicket {
   id: string;
   jira_id: string;
   key: string;
+  project_key: string;
   summary: string;
   status: string;
   assignee: string | null;
@@ -20,6 +21,7 @@ export interface RoadmapFilters {
   labels?: string[];
   assignees?: string[];
   statuses?: string[];
+  projects?: string[];
   date_range?: { start: string; end: string };
 }
 

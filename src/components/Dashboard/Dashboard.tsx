@@ -63,6 +63,12 @@ export const Dashboard: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...tickets];
 
+    if (filters.projects && filters.projects.length > 0) {
+      filtered = filtered.filter(ticket => 
+        filters.projects!.includes(ticket.project_key)
+      );
+    }
+
     if (filters.labels && filters.labels.length > 0) {
       filtered = filtered.filter(ticket => 
         filters.labels!.some(label => ticket.labels.includes(label))
@@ -108,13 +114,25 @@ export const Dashboard: React.FC = () => {
     setSyncing(true);
     try {
       const config = JSON.parse(jiraConfig);
-      const { jira_url, jira_username, jira_api_token } = config;
+      const { jira_url, jira_username, jira_api_token, jira_projects } = config;
       
       // Clean URL
       const cleanUrl = jira_url.replace(/\/$/, '');
       
-      // For on-premise Jira, use /rest/api/2/search endpoint
-      const jqlQuery = encodeURIComponent('order by created DESC');
+      // Build JQL query with project filtering
+      let jqlQuery = '';
+      if (jira_projects && jira_projects.trim()) {
+        const projectKeys = jira_projects.split(',').map((p: string) => p.trim()).filter(Boolean);
+        if (projectKeys.length > 0) {
+          const projectFilter = projectKeys.map((key: string) => `project = "${key}"`).join(' OR ');
+          jqlQuery = `(${projectFilter}) ORDER BY created DESC`;
+        } else {
+          jqlQuery = 'ORDER BY created DESC';
+        }
+      } else {
+        jqlQuery = 'ORDER BY created DESC';
+      }
+      
       const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${jqlQuery}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent`;
       
       const auth = btoa(`${jira_username}:${jira_api_token}`);
@@ -134,6 +152,9 @@ export const Dashboard: React.FC = () => {
         
         // Transform Jira issues to our ticket format
         const transformedTickets = issues.map((issue: any) => {
+          // Extract project key from the issue
+          const projectKey = issue.fields.project?.key || 'UNKNOWN';
+          
           // Extract dependencies from issue links
           const dependencies = (issue.fields.issuelinks || [])
             .filter((link: any) => link.type.name === 'Blocks' || link.type.name === 'Dependency')
@@ -177,6 +198,7 @@ export const Dashboard: React.FC = () => {
             id: issue.id,
             jira_id: issue.id,
             key: issue.key,
+            project_key: projectKey,
             summary: issue.fields.summary,
             status: issue.fields.status.name,
             assignee: issue.fields.assignee?.displayName || null,

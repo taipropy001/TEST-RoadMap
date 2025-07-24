@@ -9,6 +9,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
   const [jiraUrl, setJiraUrl] = useState('');
   const [jiraEmail, setJiraEmail] = useState('');
   const [jiraApiToken, setJiraApiToken] = useState('');
+  const [jiraProjects, setJiraProjects] = useState('');
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +28,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
         setJiraUrl(data.jira_url || '');
         setJiraEmail(data.jira_username || data.jira_email || ''); // Support both old and new format
         setJiraApiToken(data.jira_api_token || '');
+        setJiraProjects(data.jira_projects || '');
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -88,6 +90,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
         jira_url: jiraUrl,
         jira_username: jiraEmail, // Using jiraEmail variable for username
         jira_api_token: jiraApiToken,
+        jira_projects: jiraProjects,
       };
 
       // Save to localStorage instead of server
@@ -157,6 +160,23 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
               placeholder="your.username"
               required
             />
+          </div>
+
+          <div>
+            <label htmlFor="jiraProjects" className="block text-sm font-medium text-gray-700 mb-2">
+              Jira Projects (Optional)
+            </label>
+            <input
+              id="jiraProjects"
+              type="text"
+              value={jiraProjects}
+              onChange={(e) => setJiraProjects(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="PROJECT1, PROJECT2, PROJECT3 (leave empty for all projects)"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Enter project keys separated by commas. Leave empty to access all projects you have permission to view.
+            </p>
           </div>
 
           <div>
