@@ -3,11 +3,11 @@ import { Settings, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
-  onSync: () => void;
-  syncing: boolean;
+  onRefresh: () => void;
+  loading: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onSync, syncing }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onRefresh, loading }) => {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -24,13 +24,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onSync, syncing 
 
         <div className="flex items-center space-x-4">
           <button
-            onClick={onSync}
-            disabled={syncing}
+            onClick={onRefresh}
+            disabled={loading}
             className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="text-sm font-medium">
-              {syncing ? 'Syncing...' : 'Sync'}
+              {loading ? 'Loading...' : 'Refresh'}
             </span>
           </button>
 

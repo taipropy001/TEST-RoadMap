@@ -134,6 +134,7 @@ export const JiraSetup: React.FC<JiraSetupProps> = ({ onComplete }) => {
                 <li>Use your password or Personal Access Token</li>
                 <li>Ensure your Jira server allows API access and CORS if needed</li>
                 <li>Test connection before saving to verify credentials</li>
+                <li>Data will be loaded directly from Jira in real-time</li>
               </ol>
             </div>
           </div>

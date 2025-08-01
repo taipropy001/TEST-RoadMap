@@ -11,15 +11,21 @@ export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<RoadmapFilters>({});
   const [savedRoadmaps, setSavedRoadmaps] = useState<Roadmap[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [hasJiraSetup, setHasJiraSetup] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     checkJiraSetup();
-    loadTickets();
     loadSavedRoadmaps();
   }, []);
+
+  useEffect(() => {
+    if (hasJiraSetup) {
+      loadJiraData();
+    }
+  }, [hasJiraSetup]);
 
   useEffect(() => {
     applyFilters();
@@ -33,19 +39,7 @@ export const Dashboard: React.FC = () => {
       console.error('Failed to check Jira setup:', error);
       setHasJiraSetup(false);
     }
-    setLoading(false);
-  };
-
-  const loadTickets = async () => {
-    try {
-      const savedTickets = localStorage.getItem('jira_tickets');
-      if (savedTickets) {
-        const data = JSON.parse(savedTickets);
-        setTickets(data || []);
-      }
-    } catch (error) {
-      console.error('Failed to load tickets:', error);
-    }
+    setInitialLoading(false);
   };
 
   const loadSavedRoadmaps = async () => {
@@ -104,14 +98,15 @@ export const Dashboard: React.FC = () => {
     setFilteredTickets(filtered);
   };
 
-  const syncJiraData = async () => {
+  const loadJiraData = async () => {
     const jiraConfig = localStorage.getItem('jira_config');
     if (!jiraConfig) {
       console.error('No Jira configuration found');
       return;
     }
 
-    setSyncing(true);
+    setLoading(true);
+    setError('');
     try {
       const config = JSON.parse(jiraConfig);
       const { jira_url, jira_username, jira_api_token, jira_projects } = config;
@@ -237,30 +232,28 @@ export const Dashboard: React.FC = () => {
           };
         });
         
-        // Save to localStorage
-        localStorage.setItem('jira_tickets', JSON.stringify(transformedTickets));
+        // Set tickets directly without saving to localStorage
         setTickets(transformedTickets);
       } else {
         const errorText = await response.text();
         console.error('Jira API Error:', response.status, errorText);
-        throw new Error(`Failed to fetch data from Jira (${response.status}): ${errorText}`);
+        setError(`Failed to fetch data from Jira (${response.status}): ${errorText}`);
       }
     } catch (error) {
       console.error('Failed to sync Jira data:', error);
-      // You might want to show this error to the user
-      alert(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(`Load failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setSyncing(false);
+      setLoading(false);
     }
   };
 
   const handleJiraSetupComplete = () => {
     setHasJiraSetup(true);
     setShowSettings(false);
-    syncJiraData();
+    loadJiraData();
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -279,9 +272,19 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Header
         onOpenSettings={() => setShowSettings(true)}
-        onSync={syncJiraData}
-        syncing={syncing}
+        onRefresh={loadJiraData}
+        loading={loading}
       />
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-6 mt-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex-1 flex">
         <FilterPanel
@@ -292,7 +295,7 @@ export const Dashboard: React.FC = () => {
           onRoadmapsChange={loadSavedRoadmaps}
         />
         
-        <Timeline tickets={filteredTickets} />
+        <Timeline tickets={filteredTickets} loading={loading} />
       </div>
     </div>
   );

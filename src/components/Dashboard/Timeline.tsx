@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 
 interface TimelineProps {
   tickets: JiraTicket[];
+  loading?: boolean;
 }
 
 interface GroupedTickets {
@@ -14,7 +15,7 @@ interface GroupedTickets {
   };
 }
 
-export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
+export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) => {
   const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [expandAll, setExpandAll] = useState(false);
@@ -206,15 +207,22 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
   if (tickets.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Maximize2 className="w-12 h-12 text-gray-400" />
+        {loading ? (
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading tickets from Jira...</p>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets to display</h3>
-          <p className="text-gray-600">
-            Sync your Jira data or adjust your filters to see your roadmap timeline.
-          </p>
-        </div>
+        ) : (
+          <div className="text-center">
+            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Maximize2 className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets to display</h3>
+            <p className="text-gray-600">
+              Check your Jira connection or adjust your filters to see your roadmap timeline.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
