@@ -39,7 +39,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
   }, {} as GroupedTickets);
 
   // Calculate timeline bounds using start_date instead of created_date
-  const allDates = tickets.flatMap(t => [t.start_date, t.updated_date, t.due_date])
+  const allDates = tickets.flatMap(t => [t.start_date, t.due_date, t.created_date])
     .filter(Boolean) // Remove null/undefined values
     .filter(dateString => {
       // Ensure it's a string and can be parsed as a valid date
@@ -364,15 +364,15 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
                             </div>
                           </div>
                           <div className="flex-1 relative px-4 py-4">
-                            {/* Parent ticket timeline bar using start_date */}
-                            {parentTicket.start_date && (
+                            {/* Parent ticket timeline bar - show if has start_date or is in progress */}
+                            {(parentTicket.start_date || parentTicket.status === 'In Progress' || parentTicket.status === 'In Development' || parentTicket.status === 'Development' || parentTicket.status === 'Doing') && (
                               <div
                                 className={`absolute top-1/2 transform -translate-y-1/2 h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
                                 style={{
-                                  left: `${getTicketPosition(parentTicket.start_date)}%`,
+                                  left: `${getTicketPosition(parentTicket.start_date || parentTicket.created_date)}%`,
                                   width: `${getTicketWidth(parentTicket.start_date, parentTicket.due_date)}%`,
                                 }}
-                                title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nStart: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not set'}`}
+                                title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
                               />
                             )}
                             
@@ -422,15 +422,15 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
                               </div>
                             </div>
                             <div className="flex-1 relative px-4 py-3">
-                              {/* Sub-task timeline bar using start_date */}
-                              {subTask.start_date && (
+                              {/* Sub-task timeline bar - show if has start_date or is in progress */}
+                              {(subTask.start_date || subTask.status === 'In Progress' || subTask.status === 'In Development' || subTask.status === 'Development' || subTask.status === 'Doing') && (
                                 <div
                                   className={`absolute top-1/2 transform -translate-y-1/2 h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
                                   style={{
-                                    left: `${getTicketPosition(subTask.start_date)}%`,
+                                    left: `${getTicketPosition(subTask.start_date || subTask.created_date)}%`,
                                     width: `${getTicketWidth(subTask.start_date, subTask.due_date)}%`,
                                   }}
-                                  title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nAssignee: ${subTask.assignee || 'Unassigned'}\nStart: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not set'}`}
+                                  title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nAssignee: ${subTask.assignee || 'Unassigned'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
                                 />
                               )}
                               

@@ -133,7 +133,7 @@ export const Dashboard: React.FC = () => {
         jqlQuery = 'ORDER BY created DESC';
       }
       
-      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent,project`;
+      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent,project&expand=changelog`;
       
       const auth = btoa(`${jira_username}:${jira_api_token}`);
       
@@ -160,28 +160,52 @@ export const Dashboard: React.FC = () => {
             .map((link: any) => link.inwardIssue?.key || link.outwardIssue?.key)
             .filter(Boolean);
 
-          // Determine start date from multiple possible fields
+          // Find start date from changelog when status changed to "In Progress"
           const startDate = (() => {
-            const candidates = [
-              issue.fields.customfield_10015, // Start date custom field
-              issue.fields.customfield_10020, // Another possible start date field
-              issue.fields.created // Fallback to created date
-            ];
-            
-            for (const candidate of candidates) {
-              if (typeof candidate === 'string' && candidate.trim()) {
-                try {
-                  const parsed = new Date(candidate);
-                  if (!isNaN(parsed.getTime())) {
-                    return candidate;
+            // First try to find from changelog when status changed to "In Progress"
+            if (issue.changelog && issue.changelog.histories) {
+              for (const history of issue.changelog.histories) {
+                for (const item of history.items || []) {
+                  if (item.field === 'status' && 
+                      (item.toString === 'In Progress' || 
+                       item.toString === 'In Development' ||
+                       item.toString === 'Development' ||
+                       item.toString === 'Doing')) {
+                    return history.created;
                   }
-                } catch {
-                  continue;
                 }
               }
             }
             
-            return issue.fields.created; // Default fallback
+            // If currently in progress but no changelog found, use current status date
+            const currentStatus = issue.fields.status.name;
+            if (currentStatus === 'In Progress' || 
+                currentStatus === 'In Development' ||
+                currentStatus === 'Development' ||
+                currentStatus === 'Doing') {
+              // Try custom fields as fallback
+              const candidates = [
+                issue.fields.customfield_10015, // Start date custom field
+                issue.fields.customfield_10020, // Another possible start date field
+              ];
+              
+              for (const candidate of candidates) {
+                if (typeof candidate === 'string' && candidate.trim()) {
+                  try {
+                    const parsed = new Date(candidate);
+                    if (!isNaN(parsed.getTime())) {
+                      return candidate;
+                    }
+                  } catch {
+                    continue;
+                  }
+                }
+              }
+            }
+            
+            // For tickets not yet started or completed, return null
+            // This will hide them from timeline unless they have due dates
+            return null;
           })();
 
           // Extract sprint name safely
