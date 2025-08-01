@@ -98,7 +98,9 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets }) => {
       'To Do': 'bg-gray-400',
       'In Progress': 'bg-blue-500',
       'In Review': 'bg-yellow-500',
-      'Done': 'bg-green-500',
+      'Done': 'bg-[#00875A]',
+      'Resolved': 'bg-[#00875A]',
+      'Closed': 'bg-[#00875A]',
       'Blocked': 'bg-red-500',
     };
     return colors[status as keyof typeof colors] || 'bg-gray-400';
