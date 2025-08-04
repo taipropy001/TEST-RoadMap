@@ -7,7 +7,6 @@ import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
 
 export const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<JiraTicket[]>([]);
-  const [filteredTickets, setFilteredTickets] = useState<JiraTicket[]>([]);
   const [filters, setFilters] = useState<RoadmapFilters>({});
   const [savedRoadmaps, setSavedRoadmaps] = useState<Roadmap[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -23,13 +22,9 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (hasJiraSetup) {
-      loadJiraData();
+      loadJiraData(filters);
     }
-  }, [hasJiraSetup]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [tickets, filters]);
+  }, [hasJiraSetup, filters]);
 
   const checkJiraSetup = async () => {
     try {
@@ -54,51 +49,57 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...tickets];
-
+  const buildJQLQuery = (filters: RoadmapFilters, jiraProjects?: string) => {
+    const conditions: string[] = [];
+    
+    // Project filtering from config or filters
     if (filters.projects && filters.projects.length > 0) {
-      filtered = filtered.filter(ticket => 
-        filters.projects!.includes(ticket.project_key)
-      );
+      const projectFilter = filters.projects.map(key => `project = "${key}"`).join(' OR ');
+      conditions.push(`(${projectFilter})`);
+    } else if (jiraProjects && jiraProjects.trim()) {
+      const projectKeys = jiraProjects.split(',').map((p: string) => p.trim()).filter(Boolean);
+      if (projectKeys.length > 0) {
+        const projectFilter = projectKeys.map((key: string) => `project = "${key}"`).join(' OR ');
+        conditions.push(`(${projectFilter})`);
+      }
     }
-
-    if (filters.labels && filters.labels.length > 0) {
-      filtered = filtered.filter(ticket => 
-        filters.labels!.some(label => ticket.labels.includes(label))
-      );
-    }
-
-    if (filters.assignees && filters.assignees.length > 0) {
-      filtered = filtered.filter(ticket => 
-        ticket.assignee && filters.assignees!.includes(ticket.assignee)
-      );
-    }
-
+    
+    // Status filtering
     if (filters.statuses && filters.statuses.length > 0) {
-      filtered = filtered.filter(ticket => 
-        filters.statuses!.includes(ticket.status)
-      );
+      const statusFilter = filters.statuses.map(status => `status = "${status}"`).join(' OR ');
+      conditions.push(`(${statusFilter})`);
     }
-
+    
+    // Assignee filtering
+    if (filters.assignees && filters.assignees.length > 0) {
+      const assigneeFilter = filters.assignees.map(assignee => `assignee = "${assignee}"`).join(' OR ');
+      conditions.push(`(${assigneeFilter})`);
+    }
+    
+    // Label filtering
+    if (filters.labels && filters.labels.length > 0) {
+      const labelConditions = filters.labels.map(label => `labels = "${label}"`);
+      conditions.push(...labelConditions);
+    }
+    
+    // Date range filtering
     if (filters.date_range) {
-      const { start, end } = filters.date_range;
-      if (start) {
-        filtered = filtered.filter(ticket => 
-          new Date(ticket.created_date) >= new Date(start)
-        );
+      if (filters.date_range.start) {
+        conditions.push(`created >= "${filters.date_range.start}"`);
       }
-      if (end) {
-        filtered = filtered.filter(ticket => 
-          new Date(ticket.created_date) <= new Date(end)
-        );
+      if (filters.date_range.end) {
+        conditions.push(`created <= "${filters.date_range.end}"`);
       }
     }
-
-    setFilteredTickets(filtered);
+    
+    // Combine all conditions
+    let jqlQuery = conditions.length > 0 ? conditions.join(' AND ') : '';
+    jqlQuery += ' ORDER BY created DESC';
+    
+    return jqlQuery;
   };
 
-  const loadJiraData = async () => {
+  const loadJiraData = async (currentFilters: RoadmapFilters = {}) => {
     const jiraConfig = localStorage.getItem('jira_config');
     if (!jiraConfig) {
       console.error('No Jira configuration found');
@@ -114,19 +115,8 @@ export const Dashboard: React.FC = () => {
       // Clean URL
       const cleanUrl = jira_url.replace(/\/$/, '');
       
-      // Build JQL query with project filtering
-      let jqlQuery = '';
-      if (jira_projects && jira_projects.trim()) {
-        const projectKeys = jira_projects.split(',').map((p: string) => p.trim()).filter(Boolean);
-        if (projectKeys.length > 0) {
-          const projectFilter = projectKeys.map((key: string) => `project = "${key}"`).join(' OR ');
-          jqlQuery = `(${projectFilter}) ORDER BY created DESC`;
-        } else {
-          jqlQuery = 'ORDER BY created DESC';
-        }
-      } else {
-        jqlQuery = 'ORDER BY created DESC';
-      }
+      // Build JQL query with all filters
+      const jqlQuery = buildJQLQuery(currentFilters, jira_projects);
       
       const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent,project&expand=changelog`;
       
@@ -250,7 +240,7 @@ export const Dashboard: React.FC = () => {
   const handleJiraSetupComplete = () => {
     setHasJiraSetup(true);
     setShowSettings(false);
-    loadJiraData();
+    loadJiraData(filters);
   };
 
   if (initialLoading) {
@@ -272,7 +262,7 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Header
         onOpenSettings={() => setShowSettings(true)}
-        onRefresh={loadJiraData}
+        onRefresh={() => loadJiraData(filters)}
         loading={loading}
       />
       
@@ -295,7 +285,7 @@ export const Dashboard: React.FC = () => {
           onRoadmapsChange={loadSavedRoadmaps}
         />
         
-        <Timeline tickets={filteredTickets} loading={loading} />
+        <Timeline tickets={tickets} loading={loading} />
       </div>
     </div>
   );

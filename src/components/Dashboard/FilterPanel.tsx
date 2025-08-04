@@ -27,6 +27,23 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status))).sort();
   const uniqueProjects = Array.from(new Set(tickets.map(t => t.project_key))).sort();
 
+  // Load all available options from Jira config for better filtering UX
+  const [allOptions, setAllOptions] = useState({
+    labels: uniqueLabels,
+    assignees: uniqueAssignees,
+    statuses: uniqueStatuses,
+    projects: uniqueProjects,
+  });
+
+  useEffect(() => {
+    // Update available options when tickets change
+    setAllOptions({
+      labels: uniqueLabels,
+      assignees: uniqueAssignees,
+      statuses: uniqueStatuses,
+      projects: uniqueProjects,
+    });
+  }, [tickets]);
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
 
@@ -114,7 +131,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Projects</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueProjects.map((project) => (
+            {allOptions.projects.map((project) => (
               <label key={project} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -137,7 +154,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Labels</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueLabels.map((label) => (
+            {allOptions.labels.map((label) => (
               <label key={label} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -160,7 +177,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Assignees</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueAssignees.map((assignee) => (
+            {allOptions.assignees.map((assignee) => (
               <label key={assignee} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -183,7 +200,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Status</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueStatuses.map((status) => (
+            {allOptions.statuses.map((status) => (
               <label key={status} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
