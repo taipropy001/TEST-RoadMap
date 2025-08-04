@@ -86,7 +86,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className="bg-white border-r border-gray-200 w-80 p-6 overflow-y-auto">
+    <div className="bg-white border-r border-gray-200 w-80 min-w-80 max-w-80 flex-shrink-0 p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Filter className="w-5 h-5 text-gray-600" />
@@ -108,16 +108,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             <h3 className="text-sm font-medium text-gray-900 mb-3">Saved Roadmaps</h3>
             <div className="space-y-2">
               {savedRoadmaps.map((roadmap) => (
-                <div key={roadmap.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <div key={roadmap.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg min-w-0">
                   <button
                     onClick={() => loadRoadmap(roadmap)}
-                    className="text-sm text-gray-700 hover:text-gray-900 truncate flex-1 text-left"
+                    className="text-sm text-gray-700 hover:text-gray-900 truncate flex-1 text-left min-w-0"
+                    title={roadmap.name}
                   >
                     {roadmap.name}
                   </button>
                   <button
                     onClick={() => deleteRoadmap(roadmap.id)}
-                    className="text-gray-400 hover:text-red-600 transition-colors"
+                    className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0 ml-2"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -132,7 +133,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <h3 className="text-sm font-medium text-gray-900 mb-3">Projects</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allOptions.projects.map((project) => (
-              <label key={project} className="flex items-center space-x-2">
+              <label key={project} className="flex items-center space-x-2 min-w-0">
                 <input
                   type="checkbox"
                   checked={filters.projects?.includes(project) || false}
@@ -142,9 +143,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       : (filters.projects || []).filter(p => p !== project);
                     onFiltersChange({ ...filters, projects: newProjects });
                   }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700 font-mono">{project}</span>
+                <span className="text-sm text-gray-700 font-mono truncate min-w-0" title={project}>{project}</span>
               </label>
             ))}
           </div>
@@ -155,7 +156,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <h3 className="text-sm font-medium text-gray-900 mb-3">Labels</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allOptions.labels.map((label) => (
-              <label key={label} className="flex items-center space-x-2">
+              <label key={label} className="flex items-center space-x-2 min-w-0">
                 <input
                   type="checkbox"
                   checked={filters.labels?.includes(label) || false}
@@ -165,9 +166,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       : (filters.labels || []).filter(l => l !== label);
                     onFiltersChange({ ...filters, labels: newLabels });
                   }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700">{label}</span>
+                <span className="text-sm text-gray-700 truncate min-w-0" title={label}>{label}</span>
               </label>
             ))}
           </div>
@@ -178,7 +179,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <h3 className="text-sm font-medium text-gray-900 mb-3">Assignees</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allOptions.assignees.map((assignee) => (
-              <label key={assignee} className="flex items-center space-x-2">
+              <label key={assignee} className="flex items-center space-x-2 min-w-0">
                 <input
                   type="checkbox"
                   checked={filters.assignees?.includes(assignee) || false}
@@ -188,9 +189,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       : (filters.assignees || []).filter(a => a !== assignee);
                     onFiltersChange({ ...filters, assignees: newAssignees });
                   }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700">{assignee}</span>
+                <span className="text-sm text-gray-700 truncate min-w-0" title={assignee}>{assignee}</span>
               </label>
             ))}
           </div>
@@ -201,7 +202,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <h3 className="text-sm font-medium text-gray-900 mb-3">Status</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allOptions.statuses.map((status) => (
-              <label key={status} className="flex items-center space-x-2">
+              <label key={status} className="flex items-center space-x-2 min-w-0">
                 <input
                   type="checkbox"
                   checked={filters.statuses?.includes(status) || false}
@@ -211,9 +212,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                       : (filters.statuses || []).filter(s => s !== status);
                     onFiltersChange({ ...filters, statuses: newStatuses });
                   }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700">{status}</span>
+                <span className="text-sm text-gray-700 truncate min-w-0" title={status}>{status}</span>
               </label>
             ))}
           </div>

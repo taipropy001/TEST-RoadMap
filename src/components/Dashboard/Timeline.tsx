@@ -253,20 +253,20 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
       </div>
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-x-auto overflow-y-auto">
         <div ref={timelineRef} className="bg-white">
           {/* Timeline Header with Months */}
           <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10">
-            <div className="flex">
+            <div className="flex min-w-max">
               <div className="w-80 flex-shrink-0 px-6 py-4 font-medium text-gray-900 bg-white border-r border-gray-200">
                 Task
               </div>
-              <div className="flex-1 relative">
+              <div className="flex-1 relative min-w-0">
                 <div className="flex">
                   {monthsInRange.map((month, index) => (
                     <div
                       key={index}
-                      className="flex-1 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
+                      className="flex-1 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 min-w-24"
                     >
                       {format(month, 'MMM yyyy')}
                     </div>
@@ -277,7 +277,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
           </div>
 
           {/* Timeline Rows */}
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 min-w-max">
             {Object.entries(groupedTickets).map(([epicKey, parents]) => {
               const isEpicExpanded = expandedEpics.has(epicKey);
               const isStandalone = epicKey === 'standalone';
@@ -287,7 +287,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                 <div key={epicKey}>
                   {/* Epic Row (if not standalone) */}
                   {!isStandalone && (
-                    <div className="flex items-center bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <div className="flex items-center bg-blue-50 hover:bg-blue-100 transition-colors min-w-max">
                       <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200">
                         <button
                           onClick={() => toggleEpicExpanded(epicKey)}
@@ -306,7 +306,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                           </div>
                         </button>
                       </div>
-                      <div className="flex-1 relative px-4 py-4">
+                      <div className="flex-1 relative px-4 py-4 min-w-0">
                         {/* Epic timeline bar using start_date */}
                         {epicTicket && epicTicket.start_date && (
                           <div
@@ -331,7 +331,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                     return (
                       <div key={`${epicKey}:${parentKey}`}>
                         {/* Parent Task Row */}
-                        <div className="flex items-center hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center hover:bg-gray-50 transition-colors min-w-max">
                           <div className={`w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 ${!isStandalone ? 'pl-12' : ''}`}>
                             <div className="flex items-center space-x-3">
                               {hasChildren && (
@@ -373,7 +373,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                               </div>
                             </div>
                           </div>
-                          <div className="flex-1 relative px-4 py-4">
+                          <div className="flex-1 relative px-4 py-4 min-w-0">
                             {/* Parent ticket timeline bar - show if has start_date or is in progress */}
                             {(parentTicket.start_date || parentTicket.status === 'In Progress' || parentTicket.status === 'In Development' || parentTicket.status === 'Development' || parentTicket.status === 'Doing') && (
                               <div
@@ -401,7 +401,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
 
                         {/* Sub-tasks */}
                         {hasChildren && isParentExpanded && subTasks.map((subTask) => (
-                          <div key={subTask.id} className="flex items-center hover:bg-gray-50 transition-colors bg-gray-25">
+                          <div key={subTask.id} className="flex items-center hover:bg-gray-50 transition-colors bg-gray-25 min-w-max">
                             <div className={`w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 ${!isStandalone ? 'pl-20' : 'pl-14'}`}>
                               <div className="flex items-center space-x-3">
                                 <div
@@ -431,7 +431,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                                 </div>
                               </div>
                             </div>
-                            <div className="flex-1 relative px-4 py-3">
+                            <div className="flex-1 relative px-4 py-3 min-w-0">
                               {/* Sub-task timeline bar - show if has start_date or is in progress */}
                               {(subTask.start_date || subTask.status === 'In Progress' || subTask.status === 'In Development' || subTask.status === 'Development' || subTask.status === 'Doing') && (
                                 <div
