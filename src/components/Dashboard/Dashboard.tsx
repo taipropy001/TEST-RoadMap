@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
       // Build JQL query with all filters
       const jqlQuery = buildJQLQuery(currentFilters, jira_projects);
       
-      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,creator,priority,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,parent,project&expand=changelog`;
+      const jiraApiUrl = `http://localhost:8000/jira/issues?jql=${encodeURIComponent(jqlQuery)}&maxResults=100&fields=summary,status,assignee,creator,priority,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,parent,project&expand=changelog`;
       
       const auth = btoa(`${jira_username}:${jira_api_token}`);
       
@@ -139,12 +139,6 @@ export const Dashboard: React.FC = () => {
           // Extract project key from the issue
           const projectKey = issue.fields.project?.key || 'UNKNOWN';
           
-          // Extract dependencies from issue links
-          const dependencies = (issue.fields.issuelinks || [])
-            .filter((link: any) => link.type.name === 'Blocks' || link.type.name === 'Dependency')
-            .map((link: any) => link.inwardIssue?.key || link.outwardIssue?.key)
-            .filter(Boolean);
-
           // Find start date from changelog when status changed to "In Progress"
           const startDate = (() => {
             // First try to find from changelog when status changed to "In Progress"
@@ -209,7 +203,6 @@ export const Dashboard: React.FC = () => {
             created_date: issue.fields.created,
             updated_date: issue.fields.updated,
             due_date: issue.fields.duedate || null,
-            dependencies,
             parent_issue_key: issue.fields.parent?.key || null,
           };
         });
