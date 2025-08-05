@@ -253,15 +253,16 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
       </div>
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-auto">
         <div ref={timelineRef} className="bg-white">
           {/* Timeline Header with Months */}
-          <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10">
+          <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-20">
             <div className="flex min-w-max">
-              <div className="w-80 flex-shrink-0 px-6 py-4 font-medium text-gray-900 bg-white border-r border-gray-200">
+              <div className="w-80 flex-shrink-0 px-6 py-4 font-medium text-gray-900 bg-white border-r border-gray-200 sticky left-0 z-30">
                 Task
               </div>
-              <div className="flex-1 relative min-w-0">
+              <div className="flex-1 relative min-w-0 overflow-x-auto">
                 <div className="flex">
                   {monthsInRange.map((month, index) => (
                     <div
@@ -288,7 +289,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                   {/* Epic Row (if not standalone) */}
                   {!isStandalone && (
                     <div className="flex items-center bg-blue-50 hover:bg-blue-100 transition-colors min-w-max">
-                      <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200">
+                      <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-blue-50 hover:bg-blue-100 z-10">
                         <button
                           onClick={() => toggleEpicExpanded(epicKey)}
                           className="flex items-center space-x-3 w-full text-left"
@@ -332,7 +333,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                       <div key={`${epicKey}:${parentKey}`}>
                         {/* Parent Task Row */}
                         <div className="flex items-center hover:bg-gray-50 transition-colors min-w-max">
-                          <div className={`w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 ${!isStandalone ? 'pl-12' : ''}`}>
+                          <div className={`w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-white hover:bg-gray-50 z-10 ${!isStandalone ? 'pl-12' : ''}`}>
                             <div className="flex items-center space-x-3">
                               {hasChildren && (
                                 <button
@@ -402,7 +403,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                         {/* Sub-tasks */}
                         {hasChildren && isParentExpanded && subTasks.map((subTask) => (
                           <div key={subTask.id} className="flex items-center hover:bg-gray-50 transition-colors bg-gray-25 min-w-max">
-                            <div className={`w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 ${!isStandalone ? 'pl-20' : 'pl-14'}`}>
+                            <div className={`w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 sticky left-0 bg-gray-25 hover:bg-gray-50 z-10 ${!isStandalone ? 'pl-20' : 'pl-14'}`}>
                               <div className="flex items-center space-x-3">
                                 <div
                                   className={`w-2 h-2 rounded-full ${getStatusColor(subTask.status)}`}
@@ -464,6 +465,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
               );
             })}
           </div>
+        </div>
         </div>
       </div>
 
