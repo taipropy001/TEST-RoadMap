@@ -13,7 +13,6 @@ export interface JiraTicket {
   created_date: string;
   updated_date: string;
   due_date: string | null;
-  dependencies: string[];
   parent_issue_key: string | null;
 }
 
