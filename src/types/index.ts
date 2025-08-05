@@ -6,14 +6,14 @@ export interface JiraTicket {
   summary: string;
   status: string;
   assignee: string | null;
+  creator: string | null;
+  priority: string | null;
   labels: string[];
   start_date: string | null;
   created_date: string;
   updated_date: string;
   due_date: string | null;
   dependencies: string[];
-  epic_link: string | null;
-  sprint: string | null;
   parent_issue_key: string | null;
 }
 

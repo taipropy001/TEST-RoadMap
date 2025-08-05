@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
       // Build JQL query with all filters
       const jqlQuery = buildJQLQuery(currentFilters, jira_projects);
       
-      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,customfield_10014,customfield_10016,sprint,parent,project&expand=changelog`;
+      const jiraApiUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=1000&fields=summary,status,assignee,creator,priority,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,parent,project&expand=changelog`;
       
       const auth = btoa(`${jira_username}:${jira_api_token}`);
       
@@ -193,14 +193,6 @@ export const Dashboard: React.FC = () => {
             return null;
           })();
 
-          // Extract sprint name safely
-          const sprintName = (() => {
-            const sprint = issue.fields.customfield_10016; // Sprint field
-            if (Array.isArray(sprint) && sprint.length > 0) {
-              return sprint[0].name || null;
-            }
-            return null;
-          })();
 
           return {
             id: issue.id,
@@ -210,14 +202,14 @@ export const Dashboard: React.FC = () => {
             summary: issue.fields.summary,
             status: issue.fields.status.name,
             assignee: issue.fields.assignee?.displayName || null,
+            creator: issue.fields.creator?.displayName || null,
+            priority: issue.fields.priority?.name || null,
             labels: issue.fields.labels || [],
             start_date: startDate,
             created_date: issue.fields.created,
             updated_date: issue.fields.updated,
             due_date: issue.fields.duedate || null,
             dependencies,
-            epic_link: issue.fields.customfield_10014 || null, // Epic Link
-            sprint: sprintName,
             parent_issue_key: issue.fields.parent?.key || null,
           };
         });

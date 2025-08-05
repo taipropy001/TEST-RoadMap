@@ -25,7 +25,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
 
   // Group tickets by epic and then by parent issue
   const groupedTickets: GroupedTickets = tickets.reduce((acc, ticket) => {
-    const epicKey = ticket.epic_link || 'standalone';
+    const epicKey = 'standalone'; // All tickets are now standalone since we removed epic_link
     const parentKey = ticket.parent_issue_key || ticket.key; // Use ticket's own key if it's not a sub-task
     
     if (!acc[epicKey]) {
@@ -370,6 +370,11 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                                       +{parentTicket.labels.length - 2} more
                                     </span>
                                   )}
+                                  {parentTicket.priority && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                      {parentTicket.priority}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -383,7 +388,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                                   left: `${getTicketPosition(parentTicket.start_date || parentTicket.created_date)}%`,
                                   width: `${getTicketWidth(parentTicket.start_date, parentTicket.due_date)}%`,
                                 }}
-                                title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                                title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
                               />
                             )}
                             
@@ -441,7 +446,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                                     left: `${getTicketPosition(subTask.start_date || subTask.created_date)}%`,
                                     width: `${getTicketWidth(subTask.start_date, subTask.due_date)}%`,
                                   }}
-                                  title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nAssignee: ${subTask.assignee || 'Unassigned'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                                  title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nPriority: ${subTask.priority || 'None'}\nAssignee: ${subTask.assignee || 'Unassigned'}\nCreator: ${subTask.creator || 'Unknown'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
                                 />
                               )}
                               
