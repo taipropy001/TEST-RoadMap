@@ -10,32 +10,25 @@ interface TimelineProps {
 }
 
 interface GroupedTickets {
-  [epicKey: string]: {
-    [parentKey: string]: JiraTicket[];
-  };
+  [parentKey: string]: JiraTicket[];
 }
 
 export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) => {
-  const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [expandAll, setExpandAll] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  // Group tickets by epic and then by parent issue
+  // Group tickets by parent issue
   const groupedTickets: GroupedTickets = tickets.reduce((acc, ticket) => {
-    const epicKey = 'standalone'; // All tickets are now standalone since we removed epic_link
     const parentKey = ticket.parent_issue_key || ticket.key; // Use ticket's own key if it's not a sub-task
     
-    if (!acc[epicKey]) {
-      acc[epicKey] = {};
-    }
-    if (!acc[epicKey][parentKey]) {
-      acc[epicKey][parentKey] = [];
+    if (!acc[parentKey]) {
+      acc[parentKey] = [];
     }
     
-    acc[epicKey][parentKey].push(ticket);
+    acc[parentKey].push(ticket);
     return acc;
   }, {} as GroupedTickets);
 
@@ -107,44 +100,26 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     return colors[status as keyof typeof colors] || 'bg-gray-400';
   };
 
-  const toggleEpicExpanded = (epicKey: string) => {
-    const newExpanded = new Set(expandedEpics);
-    if (newExpanded.has(epicKey)) {
-      newExpanded.delete(epicKey);
-    } else {
-      newExpanded.add(epicKey);
-    }
-    setExpandedEpics(newExpanded);
-  };
-
-  const toggleParentExpanded = (epicKey: string, parentKey: string) => {
-    const combinedKey = `${epicKey}:${parentKey}`;
+  const toggleParentExpanded = (parentKey: string) => {
     const newExpanded = new Set(expandedParents);
-    if (newExpanded.has(combinedKey)) {
-      newExpanded.delete(combinedKey);
+    if (newExpanded.has(parentKey)) {
+      newExpanded.delete(parentKey);
     } else {
-      newExpanded.add(combinedKey);
+      newExpanded.add(parentKey);
     }
     setExpandedParents(newExpanded);
   };
 
   const toggleExpandAll = () => {
     if (expandAll) {
-      setExpandedEpics(new Set());
       setExpandedParents(new Set());
     } else {
-      // Expand all epics
-      const allEpics = new Set(Object.keys(groupedTickets));
-      setExpandedEpics(allEpics);
-      
       // Expand all parent tasks that have sub-tasks
       const allParents = new Set<string>();
-      Object.entries(groupedTickets).forEach(([epicKey, parents]) => {
-        Object.entries(parents).forEach(([parentKey, tickets]) => {
-          if (tickets.length > 1 || tickets.some(t => t.parent_issue_key)) {
-            allParents.add(`${epicKey}:${parentKey}`);
-          }
-        });
+      Object.entries(groupedTickets).forEach(([parentKey, tickets]) => {
+        if (tickets.length > 1 || tickets.some(t => t.parent_issue_key)) {
+          allParents.add(parentKey);
+        }
       });
       setExpandedParents(allParents);
     }
@@ -279,193 +254,146 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
 
           {/* Timeline Rows */}
           <div className="divide-y divide-gray-200 min-w-max">
-            {Object.entries(groupedTickets).map(([epicKey, parents]) => {
-              const isEpicExpanded = expandedEpics.has(epicKey);
-              const isStandalone = epicKey === 'standalone';
-              const epicTicket = isStandalone ? null : tickets.find(t => t.key === epicKey);
+            {Object.entries(groupedTickets).map(([parentKey, parentTickets]) => {
+              const parentTicket = getParentTicket(parentTickets);
+              const subTasks = getSubTasks(parentTickets);
+              const hasChildren = hasSubTasks(parentTickets);
+              const isParentExpanded = expandedParents.has(parentKey);
 
               return (
-                <div key={epicKey}>
-                  {/* Epic Row (if not standalone) */}
-                  {!isStandalone && (
-                    <div className="flex items-center bg-blue-50 hover:bg-blue-100 transition-colors min-w-max">
-                      <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-blue-50 hover:bg-blue-100 z-10">
-                        <button
-                          onClick={() => toggleEpicExpanded(epicKey)}
-                          className="flex items-center space-x-3 w-full text-left"
-                        >
-                          {isEpicExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-gray-500" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                          )}
+                <div key={parentKey}>
+                  {/* Parent Task Row */}
+                  <div className="flex items-center hover:bg-gray-50 transition-colors min-w-max">
+                    <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-white hover:bg-gray-50 z-10">
+                      <div className="flex items-center space-x-3">
+                        {hasChildren && (
+                          <button
+                            onClick={() => toggleParentExpanded(parentKey)}
+                            className="flex-shrink-0"
+                          >
+                            {isParentExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-gray-500" />
+                            )}
+                          </button>
+                        )}
+                        <div
+                          className={`w-3 h-3 rounded-full ${getStatusColor(parentTicket.status)} ${!hasChildren ? 'ml-6' : ''}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 break-words">{parentTicket.key}</div>
+                          <div className="text-xs text-gray-500 font-mono">{parentTicket.project_key}</div>
+                          <div className={`text-sm text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
+                            {parentTicket.summary}
+                          </div>
+                          <div className="flex items-center space-x-2 mt-1 flex-wrap">
+                            {parentTicket.labels.slice(0, 2).map((label, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                            {parentTicket.labels.length > 2 && (
+                              <span className="text-xs text-gray-500">
+                                +{parentTicket.labels.length - 2} more
+                              </span>
+                            )}
+                            {parentTicket.priority && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                {parentTicket.priority}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-1 relative px-4 py-4 min-w-0">
+                      {/* Parent ticket timeline bar - show if has start_date or is in progress */}
+                      {(parentTicket.start_date || parentTicket.status === 'In Progress' || parentTicket.status === 'In Development' || parentTicket.status === 'Development' || parentTicket.status === 'Doing') && (
+                        <div
+                          className={`absolute top-1/2 transform -translate-y-1/2 h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
+                          style={{
+                            left: `${getTicketPosition(parentTicket.start_date || parentTicket.created_date)}%`,
+                            width: `${getTicketWidth(parentTicket.start_date, parentTicket.due_date)}%`,
+                          }}
+                          title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                        />
+                      )}
+                      
+                      {/* Due date marker */}
+                      {parentTicket.due_date && (
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"
+                          style={{
+                            left: `${getTicketPosition(parentTicket.due_date)}%`,
+                          }}
+                          title={`Due: ${format(parseISO(parentTicket.due_date), 'MMM dd, yyyy')}`}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-tasks */}
+                  {hasChildren && isParentExpanded && subTasks.map((subTask) => (
+                    <div key={subTask.id} className="flex items-center hover:bg-gray-50 transition-colors bg-gray-25 min-w-max">
+                      <div className="w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 sticky left-0 bg-gray-25 hover:bg-gray-50 z-10 pl-14">
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-2 h-2 rounded-full ${getStatusColor(subTask.status)}`}
+                          />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-blue-900 break-words">{epicKey}</div>
-                            <div className={`text-sm text-blue-700 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
-                              {epicTicket?.summary || 'Epic'}
+                            <div className="text-sm font-medium text-gray-800 break-words">{subTask.key}</div>
+                            <div className="text-xs text-gray-500 font-mono">{subTask.project_key}</div>
+                            <div className={`text-xs text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
+                              {subTask.summary}
+                            </div>
+                            <div className="flex items-center space-x-1 mt-1 flex-wrap">
+                              {subTask.labels.slice(0, 1).map((label, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                              {subTask.labels.length > 1 && (
+                                <span className="text-xs text-gray-500">
+                                  +{subTask.labels.length - 1}
+                                </span>
+                              )}
                             </div>
                           </div>
-                        </button>
+                        </div>
                       </div>
-                      <div className="flex-1 relative px-4 py-4 min-w-0">
-                        {/* Epic timeline bar using start_date */}
-                        {epicTicket && epicTicket.start_date && (
+                      <div className="flex-1 relative px-4 py-3 min-w-0">
+                        {/* Sub-task timeline bar - show if has start_date or is in progress */}
+                        {(subTask.start_date || subTask.status === 'In Progress' || subTask.status === 'In Development' || subTask.status === 'Development' || subTask.status === 'Doing') && (
                           <div
-                            className="absolute top-1/2 transform -translate-y-1/2 h-6 bg-blue-600 rounded-lg shadow-sm opacity-80"
+                            className={`absolute top-1/2 transform -translate-y-1/2 h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
                             style={{
-                              left: `${getTicketPosition(epicTicket.start_date)}%`,
-                              width: `${getTicketWidth(epicTicket.start_date, epicTicket.due_date)}%`,
+                              left: `${getTicketPosition(subTask.start_date || subTask.created_date)}%`,
+                              width: `${getTicketWidth(subTask.start_date, subTask.due_date)}%`,
                             }}
+                            title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nPriority: ${subTask.priority || 'None'}\nAssignee: ${subTask.assignee || 'Unassigned'}\nCreator: ${subTask.creator || 'Unknown'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                          />
+                        )}
+                        
+                        {/* Due date marker */}
+                        {subTask.due_date && (
+                          <div
+                            className="absolute top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full border border-white shadow-sm"
+                            style={{
+                              left: `${getTicketPosition(subTask.due_date)}%`,
+                            }}
+                            title={`Due: ${format(parseISO(subTask.due_date), 'MMM dd, yyyy')}`}
                           />
                         )}
                       </div>
                     </div>
-                  )}
-
-                  {/* Parent Tasks and Sub-tasks */}
-                  {(isStandalone || isEpicExpanded) && Object.entries(parents).map(([parentKey, parentTickets]) => {
-                    const parentTicket = getParentTicket(parentTickets);
-                    const subTasks = getSubTasks(parentTickets);
-                    const hasChildren = hasSubTasks(parentTickets);
-                    const isParentExpanded = expandedParents.has(`${epicKey}:${parentKey}`);
-
-                    return (
-                      <div key={`${epicKey}:${parentKey}`}>
-                        {/* Parent Task Row */}
-                        <div className="flex items-center hover:bg-gray-50 transition-colors min-w-max">
-                          <div className={`w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-white hover:bg-gray-50 z-10 ${!isStandalone ? 'pl-12' : ''}`}>
-                            <div className="flex items-center space-x-3">
-                              {hasChildren && (
-                                <button
-                                  onClick={() => toggleParentExpanded(epicKey, parentKey)}
-                                  className="flex-shrink-0"
-                                >
-                                  {isParentExpanded ? (
-                                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                                  )}
-                                </button>
-                              )}
-                              <div
-                                className={`w-3 h-3 rounded-full ${getStatusColor(parentTicket.status)} ${!hasChildren ? 'ml-6' : ''}`}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 break-words">{parentTicket.key}</div>
-                                <div className="text-xs text-gray-500 font-mono">{parentTicket.project_key}</div>
-                                <div className={`text-sm text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
-                                  {parentTicket.summary}
-                                </div>
-                                <div className="flex items-center space-x-2 mt-1 flex-wrap">
-                                  {parentTicket.labels.slice(0, 2).map((label, index) => (
-                                    <span
-                                      key={index}
-                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                                    >
-                                      {label}
-                                    </span>
-                                  ))}
-                                  {parentTicket.labels.length > 2 && (
-                                    <span className="text-xs text-gray-500">
-                                      +{parentTicket.labels.length - 2} more
-                                    </span>
-                                  )}
-                                  {parentTicket.priority && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                      {parentTicket.priority}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex-1 relative px-4 py-4 min-w-0">
-                            {/* Parent ticket timeline bar - show if has start_date or is in progress */}
-                            {(parentTicket.start_date || parentTicket.status === 'In Progress' || parentTicket.status === 'In Development' || parentTicket.status === 'Development' || parentTicket.status === 'Doing') && (
-                              <div
-                                className={`absolute top-1/2 transform -translate-y-1/2 h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
-                                style={{
-                                  left: `${getTicketPosition(parentTicket.start_date || parentTicket.created_date)}%`,
-                                  width: `${getTicketWidth(parentTicket.start_date, parentTicket.due_date)}%`,
-                                }}
-                                title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
-                              />
-                            )}
-                            
-                            {/* Due date marker */}
-                            {parentTicket.due_date && (
-                              <div
-                                className="absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"
-                                style={{
-                                  left: `${getTicketPosition(parentTicket.due_date)}%`,
-                                }}
-                                title={`Due: ${format(parseISO(parentTicket.due_date), 'MMM dd, yyyy')}`}
-                              />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Sub-tasks */}
-                        {hasChildren && isParentExpanded && subTasks.map((subTask) => (
-                          <div key={subTask.id} className="flex items-center hover:bg-gray-50 transition-colors bg-gray-25 min-w-max">
-                            <div className={`w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 sticky left-0 bg-gray-25 hover:bg-gray-50 z-10 ${!isStandalone ? 'pl-20' : 'pl-14'}`}>
-                              <div className="flex items-center space-x-3">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${getStatusColor(subTask.status)}`}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium text-gray-800 break-words">{subTask.key}</div>
-                                  <div className="text-xs text-gray-500 font-mono">{subTask.project_key}</div>
-                                  <div className={`text-xs text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
-                                    {subTask.summary}
-                                  </div>
-                                  <div className="flex items-center space-x-1 mt-1 flex-wrap">
-                                    {subTask.labels.slice(0, 1).map((label, index) => (
-                                      <span
-                                        key={index}
-                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
-                                      >
-                                        {label}
-                                      </span>
-                                    ))}
-                                    {subTask.labels.length > 1 && (
-                                      <span className="text-xs text-gray-500">
-                                        +{subTask.labels.length - 1}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex-1 relative px-4 py-3 min-w-0">
-                              {/* Sub-task timeline bar - show if has start_date or is in progress */}
-                              {(subTask.start_date || subTask.status === 'In Progress' || subTask.status === 'In Development' || subTask.status === 'Development' || subTask.status === 'Doing') && (
-                                <div
-                                  className={`absolute top-1/2 transform -translate-y-1/2 h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
-                                  style={{
-                                    left: `${getTicketPosition(subTask.start_date || subTask.created_date)}%`,
-                                    width: `${getTicketWidth(subTask.start_date, subTask.due_date)}%`,
-                                  }}
-                                  title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nPriority: ${subTask.priority || 'None'}\nAssignee: ${subTask.assignee || 'Unassigned'}\nCreator: ${subTask.creator || 'Unknown'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
-                                />
-                              )}
-                              
-                              {/* Due date marker */}
-                              {subTask.due_date && (
-                                <div
-                                  className="absolute top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full border border-white shadow-sm"
-                                  style={{
-                                    left: `${getTicketPosition(subTask.due_date)}%`,
-                                  }}
-                                  title={`Due: ${format(parseISO(subTask.due_date), 'MMM dd, yyyy')}`}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
+                  ))}
                 </div>
               );
             })}
