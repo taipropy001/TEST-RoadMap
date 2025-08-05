@@ -20,6 +20,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [roadmapName, setRoadmapName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [allAssignees, setAllAssignees] = useState<string[]>([]);
+  const [allLabels, setAllLabels] = useState<string[]>([]);
 
   // Extract unique values from tickets
   const uniqueLabels = Array.from(new Set(tickets.flatMap(t => t.labels))).sort();
@@ -27,23 +30,88 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status))).sort();
   const uniqueProjects = Array.from(new Set(tickets.map(t => t.project_key))).sort();
 
-  // Load all available options from Jira config for better filtering UX
-  const [allOptions, setAllOptions] = useState({
-    labels: uniqueLabels,
-    assignees: uniqueAssignees,
-    statuses: uniqueStatuses,
-    projects: uniqueProjects,
-  });
-
   useEffect(() => {
-    // Update available options when tickets change
-    setAllOptions({
-      labels: uniqueLabels,
-      assignees: uniqueAssignees,
-      statuses: uniqueStatuses,
-      projects: uniqueProjects,
-    });
-  }, [tickets]);
+    loadJiraOptions();
+  }, []);
+
+  const loadJiraOptions = async () => {
+    const jiraConfig = localStorage.getItem('jira_config');
+    if (!jiraConfig) return;
+
+    setLoadingOptions(true);
+    try {
+      const config = JSON.parse(jiraConfig);
+      const { jira_url, jira_username, jira_api_token, jira_projects } = config;
+      const cleanUrl = jira_url.replace(/\/$/, '');
+      const auth = btoa(`${jira_username}:${jira_api_token}`);
+
+      // Build project filter for queries
+      let projectFilter = '';
+      if (jira_projects && jira_projects.trim()) {
+        const projectKeys = jira_projects.split(',').map((p: string) => p.trim()).filter(Boolean);
+        if (projectKeys.length > 0) {
+          projectFilter = projectKeys.map((key: string) => `project = "${key}"`).join(' OR ');
+        }
+      }
+
+      // Query for all assignees
+      const assigneesQuery = projectFilter 
+        ? `${projectFilter} AND assignee is not EMPTY`
+        : 'assignee is not EMPTY';
+      
+      const assigneesUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(assigneesQuery)}&maxResults=1000&fields=assignee`;
+      
+      const assigneesResponse = await fetch(assigneesUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (assigneesResponse.ok) {
+        const assigneesData = await assigneesResponse.json();
+        const assigneeSet = new Set<string>();
+        assigneesData.issues?.forEach((issue: any) => {
+          if (issue.fields.assignee?.displayName) {
+            assigneeSet.add(issue.fields.assignee.displayName);
+          }
+        });
+        setAllAssignees(Array.from(assigneeSet).sort());
+      }
+
+      // Query for all labels
+      const labelsQuery = projectFilter 
+        ? `${projectFilter} AND labels is not EMPTY`
+        : 'labels is not EMPTY';
+      
+      const labelsUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(labelsQuery)}&maxResults=1000&fields=labels`;
+      
+      const labelsResponse = await fetch(labelsUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (labelsResponse.ok) {
+        const labelsData = await labelsResponse.json();
+        const labelSet = new Set<string>();
+        labelsData.issues?.forEach((issue: any) => {
+          issue.fields.labels?.forEach((label: string) => {
+            labelSet.add(label);
+          });
+        });
+        setAllLabels(Array.from(labelSet).sort());
+      }
+
+    } catch (error) {
+      console.error('Failed to load Jira options:', error);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
 
@@ -133,7 +201,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Projects</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {allOptions.projects.map((project) => (
+            {uniqueProjects.map((project) => (
               <label key={project} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -155,8 +223,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         {/* Labels Filter */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Labels</h3>
+          {loadingOptions && (
+            <div className="text-xs text-gray-500 mb-2">Loading labels...</div>
+          )}
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {allOptions.labels.map((label) => (
+            {allLabels.map((label) => (
               <label key={label} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -178,8 +249,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         {/* Assignees Filter */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Assignees</h3>
+          {loadingOptions && (
+            <div className="text-xs text-gray-500 mb-2">Loading assignees...</div>
+          )}
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {allOptions.assignees.map((assignee) => (
+            {allAssignees.map((assignee) => (
               <label key={assignee} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -202,7 +276,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Status</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {allOptions.statuses.map((status) => (
+            {uniqueStatuses.map((status) => (
               <label key={status} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
