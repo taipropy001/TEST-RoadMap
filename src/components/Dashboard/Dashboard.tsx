@@ -285,7 +285,9 @@ export const Dashboard: React.FC = () => {
           onRoadmapsChange={loadSavedRoadmaps}
         />
         
-        <Timeline tickets={tickets} loading={loading} />
+        <div className="flex-1 min-w-0">
+          <Timeline tickets={tickets} loading={loading} />
+        </div>
       </div>
     </div>
   );
