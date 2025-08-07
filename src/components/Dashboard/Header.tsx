@@ -2,12 +2,11 @@ import React from 'react';
 import { Settings, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
-  onOpenSettings: () => void;
   onRefresh: () => void;
   loading: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onRefresh, loading }) => {
+export const Header: React.FC<HeaderProps> = ({ onRefresh, loading }) => {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -34,13 +33,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onRefresh, loadi
             </span>
           </button>
 
-          <button
-            onClick={onOpenSettings}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-sm font-medium">Settings</span>
-          </button>
         </div>
       </div>
     </header>

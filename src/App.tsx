@@ -1,21 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard/Dashboard';
-import { JiraSetup } from './components/Setup/JiraSetup';
 
 function App() {
-  const [hasJiraSetup, setHasJiraSetup] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if Jira configuration exists in localStorage
-    const jiraConfig = localStorage.getItem('jira_config');
-    setHasJiraSetup(!!jiraConfig);
     setLoading(false);
   }, []);
-
-  const handleJiraSetupComplete = () => {
-    setHasJiraSetup(true);
-  };
 
   if (loading) {
     return (
@@ -28,11 +20,9 @@ function App() {
     );
   }
 
-  if (!hasJiraSetup) {
-    return <JiraSetup onComplete={handleJiraSetupComplete} />;
-  }
-
-  return <Dashboard />;
+  return (<div className='overflow-hidden' style={{ height: '100vh' }}>
+    <Dashboard />
+  </div>);
 }
 
 export default App;

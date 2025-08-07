@@ -1,6 +1,5 @@
 export interface JiraTicket {
   id: string;
-  jira_id: string;
   key: string;
   project_key: string;
   summary: string;

@@ -2,40 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { FilterPanel } from './FilterPanel';
 import { Timeline } from './Timeline';
-import { JiraSetup } from '../Setup/JiraSetup';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
 
 export const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<JiraTicket[]>([]);
   const [filters, setFilters] = useState<RoadmapFilters>({});
   const [savedRoadmaps, setSavedRoadmaps] = useState<Roadmap[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [hasJiraSetup, setHasJiraSetup] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    checkJiraSetup();
+    loadJiraData(filters);
     loadSavedRoadmaps();
   }, []);
 
   useEffect(() => {
-    if (hasJiraSetup) {
       loadJiraData(filters);
-    }
-  }, [hasJiraSetup, filters]);
+  }, [filters]);
 
-  const checkJiraSetup = async () => {
-    try {
-      const jiraConfig = localStorage.getItem('jira_config');
-      setHasJiraSetup(!!jiraConfig);
-    } catch (error) {
-      console.error('Failed to check Jira setup:', error);
-      setHasJiraSetup(false);
-    }
-    setInitialLoading(false);
-  };
+  
 
   const loadSavedRoadmaps = async () => {
     try {
@@ -109,101 +94,40 @@ export const Dashboard: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const config = JSON.parse(jiraConfig);
-      const { jira_url, jira_username, jira_api_token, jira_projects } = config;
-      
-      // Clean URL
-      const cleanUrl = jira_url.replace(/\/$/, '');
-      
       // Build JQL query with all filters
-      const jqlQuery = buildJQLQuery(currentFilters, jira_projects);
-      
-      const jiraApiUrl = `http://localhost:8000/jira/issues?jql=${encodeURIComponent(jqlQuery)}&maxResults=100&fields=summary,status,assignee,creator,priority,labels,created,updated,duedate,customfield_10015,customfield_10020,issuelinks,parent,project&expand=changelog`;
-      
-      const auth = btoa(`${jira_username}:${jira_api_token}`);
-      
+      const jiraApiUrl = `http://localhost:8000/issues/filter`;
       const response = await fetch(jiraApiUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
-          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        body: JSON.stringify({
+          currentFilters
+        })
       });
 
       if (response.ok) {
         const jiraData = await response.json();
-        const issues = jiraData.issues || [];
         
         // Transform Jira issues to our ticket format
-        const transformedTickets = issues.map((issue: any) => {
-          // Extract project key from the issue
-          const projectKey = issue.fields.project?.key || 'UNKNOWN';
-          
-          // Find start date from changelog when status changed to "In Progress"
-          const startDate = (() => {
-            // First try to find from changelog when status changed to "In Progress"
-            if (issue.changelog && issue.changelog.histories) {
-              for (const history of issue.changelog.histories) {
-                for (const item of history.items || []) {
-                  if (item.field === 'status' && 
-                      (item.toString === 'In Progress' || 
-                       item.toString === 'In Development' ||
-                       item.toString === 'Development' ||
-                       item.toString === 'Doing')) {
-                    return history.created;
-                  }
-                }
-              }
-            }
-            
-            // If currently in progress but no changelog found, use current status date
-            const currentStatus = issue.fields.status.name;
-            if (currentStatus === 'In Progress' || 
-                currentStatus === 'In Development' ||
-                currentStatus === 'Development' ||
-                currentStatus === 'Doing') {
-              // Try custom fields as fallback
-              const candidates = [
-                issue.fields.customfield_10015, // Start date custom field
-                issue.fields.customfield_10020, // Another possible start date field
-              ];
-              
-              for (const candidate of candidates) {
-                if (typeof candidate === 'string' && candidate.trim()) {
-                  try {
-                    const parsed = new Date(candidate);
-                    if (!isNaN(parsed.getTime())) {
-                      return candidate;
-                    }
-                  } catch {
-                    continue;
-                  }
-                }
-              }
-            }
-            
-            // For tickets not yet started or completed, return null
-            // This will hide them from timeline unless they have due dates
-            return null;
-          })();
-
+        const transformedTickets = jiraData.map((issue: any) => {
 
           return {
-            id: issue.id,
-            jira_id: issue.id,
-            key: issue.key,
-            project_key: projectKey,
-            summary: issue.fields.summary,
-            status: issue.fields.status.name,
-            assignee: issue.fields.assignee?.displayName || null,
-            creator: issue.fields.creator?.displayName || null,
-            priority: issue.fields.priority?.name || null,
-            labels: issue.fields.labels || [],
-            start_date: startDate,
-            created_date: issue.fields.created,
-            updated_date: issue.fields.updated,
-            due_date: issue.fields.duedate || null,
-            parent_issue_key: issue.fields.parent?.key || null,
+            id: issue.Id,
+            key: issue.IssueKey,
+            project_key: issue.ProjectKey,
+            summary: issue.Summary,
+            status: issue.Status,
+            assignee: issue.Assignee,
+            creator: issue.Creator,
+            priority: issue.Priority,
+            labels: issue.Labels ? issue.Labels.split(',').map((label: string) => label.trim()) : [],
+            start_date: issue.StartDate,
+            created_date: issue.CreatedDate,
+            updated_date: issue.UpdatedDate,
+            due_date: issue.DueDate,
+            parent_issue_key: issue.ParentIssueKey,
           };
         });
         
@@ -222,31 +146,10 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleJiraSetupComplete = () => {
-    setHasJiraSetup(true);
-    setShowSettings(false);
-    loadJiraData(filters);
-  };
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasJiraSetup || showSettings) {
-    return <JiraSetup onComplete={handleJiraSetupComplete} />;
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Header
-        onOpenSettings={() => setShowSettings(true)}
         onRefresh={() => loadJiraData(filters)}
         loading={loading}
       />

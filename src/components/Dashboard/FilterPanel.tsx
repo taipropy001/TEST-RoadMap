@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Save, Plus, X } from 'lucide-react';
+import { Filter, Save, X } from 'lucide-react';
 import { JiraTicket, RoadmapFilters, Roadmap } from '../../types';
 
 interface FilterPanelProps {
@@ -23,12 +23,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [allAssignees, setAllAssignees] = useState<string[]>([]);
   const [allLabels, setAllLabels] = useState<string[]>([]);
-
-  // Extract unique values from tickets
-  const uniqueLabels = Array.from(new Set(tickets.flatMap(t => t.labels))).sort();
-  const uniqueAssignees = Array.from(new Set(tickets.map(t => t.assignee).filter(Boolean))).sort();
-  const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status))).sort();
-  const uniqueProjects = Array.from(new Set(tickets.map(t => t.project_key))).sort();
+  const [allStatuses, setAllStatuses] = useState<string[]>([]);
 
   useEffect(() => {
     loadJiraOptions();
@@ -40,71 +35,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
     setLoadingOptions(true);
     try {
-      const config = JSON.parse(jiraConfig);
-      const { jira_url, jira_username, jira_api_token, jira_projects } = config;
-      const cleanUrl = jira_url.replace(/\/$/, '');
-      const auth = btoa(`${jira_username}:${jira_api_token}`);
-
-      // Build project filter for queries
-      let projectFilter = '';
-      if (jira_projects && jira_projects.trim()) {
-        const projectKeys = jira_projects.split(',').map((p: string) => p.trim()).filter(Boolean);
-        if (projectKeys.length > 0) {
-          projectFilter = projectKeys.map((key: string) => `project = "${key}"`).join(' OR ');
-        }
-      }
 
       // Query for all assignees
-      const assigneesQuery = projectFilter 
-        ? `${projectFilter} AND assignee is not EMPTY`
-        : 'assignee is not EMPTY';
-      
-      const assigneesUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(assigneesQuery)}&maxResults=1000&fields=assignee`;
-      
-      const assigneesResponse = await fetch(assigneesUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Accept': 'application/json',
-        },
-      });
+      loadStatuses();
 
-      if (assigneesResponse.ok) {
-        const assigneesData = await assigneesResponse.json();
-        const assigneeSet = new Set<string>();
-        assigneesData.issues?.forEach((issue: any) => {
-          if (issue.fields.assignee?.displayName) {
-            assigneeSet.add(issue.fields.assignee.displayName);
-          }
-        });
-        setAllAssignees(Array.from(assigneeSet).sort());
-      }
+      // Query for all assignees
+      loadAssignees();
 
       // Query for all labels
-      const labelsQuery = projectFilter 
-        ? `${projectFilter} AND labels is not EMPTY`
-        : 'labels is not EMPTY';
-      
-      const labelsUrl = `${cleanUrl}/rest/api/2/search?jql=${encodeURIComponent(labelsQuery)}&maxResults=1000&fields=labels`;
-      
-      const labelsResponse = await fetch(labelsUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (labelsResponse.ok) {
-        const labelsData = await labelsResponse.json();
-        const labelSet = new Set<string>();
-        labelsData.issues?.forEach((issue: any) => {
-          issue.fields.labels?.forEach((label: string) => {
-            labelSet.add(label);
-          });
-        });
-        setAllLabels(Array.from(labelSet).sort());
-      }
+      loadLabels();
 
     } catch (error) {
       console.error('Failed to load Jira options:', error);
@@ -112,6 +51,56 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       setLoadingOptions(false);
     }
   };
+
+  async function loadStatuses() {
+    const statusesUrl = `http://localhost:8000/statuses`;
+
+    const statusesResponse = await fetch(statusesUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (statusesResponse.ok) {
+      const statusesData = await statusesResponse.json();
+      setAllStatuses(statusesData);
+    }
+  }
+  
+
+  async function loadAssignees() {
+    const assigneesUrl = `http://localhost:8000/assignees`;
+
+    const assigneesResponse = await fetch(assigneesUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (assigneesResponse.ok) {
+      const assigneesData = await assigneesResponse.json();
+      setAllAssignees(assigneesData);
+    }
+  }
+  
+  async function loadLabels() {
+    const labelsUrl = `http://localhost:8000/labels`;
+
+    const labelsResponse = await fetch(labelsUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (labelsResponse.ok) {
+      const labelsData = await labelsResponse.json();
+      setAllLabels(labelsData);
+    }
+  }
+
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
 
@@ -154,7 +143,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className="bg-white border-r border-gray-200 w-80 min-w-80 max-w-80 flex-shrink-0 overflow-y-auto">
+    <div className="bg-white border-r border-gray-200 w-80 min-w-80 max-w-80 flex-shrink-0 overflow-y-auto" style={{ height: 'calc( 100vh - 85px)' }}>
       <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
@@ -196,29 +185,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
           </div>
         )}
-
-        {/* Projects Filter */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Projects</h3>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueProjects.map((project) => (
-              <label key={project} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.projects?.includes(project) || false}
-                  onChange={(e) => {
-                    const newProjects = e.target.checked
-                      ? [...(filters.projects || []), project]
-                      : (filters.projects || []).filter(p => p !== project);
-                    onFiltersChange({ ...filters, projects: newProjects });
-                  }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
-                />
-                <span className="text-sm text-gray-700 font-mono truncate" title={project}>{project}</span>
-              </label>
-            ))}
-          </div>
-        </div>
 
         {/* Labels Filter */}
         <div>
@@ -276,7 +242,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Status</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {uniqueStatuses.map((status) => (
+            {allStatuses.map((status) => (
               <label key={status} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
