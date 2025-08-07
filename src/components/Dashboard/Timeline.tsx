@@ -262,8 +262,8 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
       </div>
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-auto">
-        <div ref={timelineRef} className="bg-white" style={{ minWidth: `${320 + monthsInRange.length * 128}px` }}>
+      <div className="flex-1">
+        <div ref={timelineRef} className="bg-white">
           {/* Timeline Header with Months */}
           <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-20 min-w-max">
             <div className="flex">
@@ -282,7 +282,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
           </div>
 
           {/* Timeline Rows */}
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200" style={{  width: 'calc(100vw - 320px)',  height: 'calc(100vh - 220px)', overflow: 'auto'}}>
             {Object.entries(groupedTickets).map(([parentKey, parentTickets]) => {
               const parentTicket = getParentTicket(parentTickets);
               const subTasks = getSubTasks(parentTickets);
