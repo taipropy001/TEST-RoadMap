@@ -30,76 +30,30 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   }, []);
 
   const loadJiraOptions = async () => {
-    const jiraConfig = localStorage.getItem('jira_config');
-    if (!jiraConfig) return;
-
     setLoadingOptions(true);
     try {
-
-      // Query for all assignees
-      loadStatuses();
-
-      // Query for all assignees
-      loadAssignees();
-
-      // Query for all labels
-      loadLabels();
-
+      // Mock data for filter options
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setAllStatuses(['To Do', 'In Progress', 'In Review', 'Done', 'Blocked']);
+      setAllAssignees(['Alice Brown', 'Bob Wilson', 'Charlie Davis', 'Diana Miller', 'Eve Anderson', 'Frank Thompson']);
+      setAllLabels([
+        'infrastructure', 'setup', 'backend', 'database', 'schema', 'design',
+        'api', 'authentication', 'security', 'frontend', 'react', 'ui',
+        'user', 'management', 'admin', 'payment', 'integration', 'stripe',
+        'mobile', 'react-native', 'ios', 'android', 'performance', 'optimization',
+        'caching', 'analytics', 'reporting', 'dashboard', 'ai', 'ml', 'python',
+        'microservices', 'architecture', 'docker', 'kubernetes', 'audit', 'compliance',
+        'platform', 'nextgen', 'redesign', 'ui/ux', 'v2', 'migration', 'postgresql',
+        'expansion', 'global', 'localization', 'i18n', 'translation', 'gdpr', 'legal',
+        'cloud', 'aws', 'upgrade', 'monitoring', 'alerting', 'observability'
+      ]);
     } catch (error) {
       console.error('Failed to load Jira options:', error);
     } finally {
       setLoadingOptions(false);
     }
   };
-
-  async function loadStatuses() {
-    const statusesUrl = `http://localhost:8000/statuses`;
-
-    const statusesResponse = await fetch(statusesUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (statusesResponse.ok) {
-      const statusesData = await statusesResponse.json();
-      setAllStatuses(statusesData);
-    }
-  }
-  
-
-  async function loadAssignees() {
-    const assigneesUrl = `http://localhost:8000/assignees`;
-
-    const assigneesResponse = await fetch(assigneesUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (assigneesResponse.ok) {
-      const assigneesData = await assigneesResponse.json();
-      setAllAssignees(assigneesData);
-    }
-  }
-  
-  async function loadLabels() {
-    const labelsUrl = `http://localhost:8000/labels`;
-
-    const labelsResponse = await fetch(labelsUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (labelsResponse.ok) {
-      const labelsData = await labelsResponse.json();
-      setAllLabels(labelsData);
-    }
-  }
 
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
