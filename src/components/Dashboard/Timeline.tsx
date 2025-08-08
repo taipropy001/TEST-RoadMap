@@ -261,19 +261,28 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
         </div>
       </div>
 
-      {/* Timeline Content - Split into two containers */}
-      <div className="flex-1 flex" style={{ height: 'calc(100vh - 85px)' }}>
-        {/* Left Container - Task List */}
-        <div className="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
-          {/* Task List Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-            <div className="px-6 py-4 font-medium text-gray-900">
-              Task
+      {/* Timeline Content */}
+      <div className="flex-1">
+        <div ref={timelineRef} className="bg-white">
+          {/* Timeline Header with Months */}
+          <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-20 min-w-max">
+            <div className="flex">
+              <div className="w-80 flex-shrink-0 px-6 py-4 font-medium text-gray-900 bg-white border-r border-gray-200 sticky left-0 z-30">
+                Task
+              </div>
+              {monthsInRange.map((month, index) => (
+                <div
+                  key={index}
+                  className="w-32 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 flex-shrink-0"
+                >
+                  {format(month, 'MMM yyyy')}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Task List Content - Scrollable */}
-          <div className="flex-1 divide-y divide-gray-200 overflow-y-auto">
+          {/* Timeline Rows */}
+          <div className="divide-y divide-gray-200" style={{  width: 'calc(100vw - 320px)',  height: 'calc(100vh - 220px)', overflow: 'auto'}}>
             {Object.entries(groupedTickets).map(([parentKey, parentTickets]) => {
               const parentTicket = getParentTicket(parentTickets);
               const subTasks = getSubTasks(parentTickets);
@@ -283,9 +292,9 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
               return (
                 <div key={parentKey}>
                   {/* Parent Task Row */}
-                  <div className="hover:bg-gray-50 transition-colors" style={{ minHeight: '88px' }}>
-                    <div className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
+                  <div className="flex hover:bg-gray-50 transition-colors" style={{ height: '88px' }}>
+                    <div className="w-80 flex-shrink-0 px-6 py-4 border-r border-gray-200 sticky left-0 bg-white hover:bg-gray-50 z-10">
+                      <div className="flex items-center space-x-3 h-full">
                         {hasChildren && (
                           <button
                             onClick={() => toggleParentExpanded(parentKey)}
@@ -303,7 +312,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                         />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 break-words">{parentTicket.key}</div>
-                          <div className="text-sm text-gray-600 leading-relaxed break-words">
+                          <div className={`text-sm text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
                             {parentTicket.summary}
                           </div>
                           <div className="flex items-center space-x-2 mt-1 flex-wrap">
@@ -329,19 +338,45 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                         </div>
                       </div>
                     </div>
+                    {monthsInRange.map((month, monthIndex) => (
+                      <div key={monthIndex} className="w-32 relative border-r border-gray-200 last:border-r-0 flex-shrink-0" style={{ height: '88px' }}>
+                        {/* Timeline bar for this month */}
+                        {getMonthPosition(parentTicket.start_date, parentTicket.due_date, month) && (
+                          <div
+                            className={`absolute top-1/2 transform -translate-y-1/2 h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
+                            style={{
+                              left: `${getMonthPosition(parentTicket.start_date, parentTicket.due_date, month)?.left || 0}%`,
+                              width: `${getMonthPosition(parentTicket.start_date, parentTicket.due_date, month)?.width || 0}%`,
+                            }}
+                            title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                          />
+                        )}
+                        
+                        {/* Due date marker for this month */}
+                        {parentTicket.due_date && isDateInMonth(parentTicket.due_date, month) && (
+                          <div
+                            className="absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"
+                            style={{
+                              left: `${getDueDatePosition(parentTicket.due_date, month)}%`,
+                            }}
+                            title={`Due: ${format(parseISO(parentTicket.due_date), 'MMM dd, yyyy')}`}
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
 
                   {/* Sub-tasks */}
                   {hasChildren && isParentExpanded && subTasks.map((subTask) => (
-                    <div key={subTask.id} className="hover:bg-gray-50 transition-colors bg-gray-25" style={{ minHeight: '64px' }}>
-                      <div className="px-6 py-3 bg-gray-25 hover:bg-gray-50 pl-14">
-                        <div className="flex items-center space-x-3">
+                    <div key={subTask.id} className="flex hover:bg-gray-50 transition-colors bg-gray-25" style={{ height: '64px' }}>
+                      <div className="w-80 flex-shrink-0 px-6 py-3 border-r border-gray-200 sticky left-0 bg-gray-25 hover:bg-gray-50 z-10 pl-14">
+                        <div className="flex items-center space-x-3 h-full">
                           <div
                             className={`w-2 h-2 rounded-full ${getStatusColor(subTask.status)}`}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-800 break-words">{subTask.key}</div>
-                            <div className="text-xs text-gray-600 leading-relaxed break-words">
+                            <div className={`text-xs text-gray-600 leading-relaxed ${isExporting ? 'break-words' : 'truncate'}`}>
                               {subTask.summary}
                             </div>
                             <div className="flex items-center space-x-1 mt-1 flex-wrap">
@@ -362,81 +397,12 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right Container - Timeline Chart */}
-        <div className="flex-1 bg-white flex flex-col">
-          {/* Timeline Chart Header */}
-          <div className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10">
-            <div className="flex">
-              {monthsInRange.map((month, index) => (
-                <div
-                  key={index}
-                  className="w-32 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 flex-shrink-0"
-                >
-                  {format(month, 'MMM yyyy')}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Timeline Chart Content - Scrollable */}
-          <div ref={timelineRef} className="flex-1 divide-y divide-gray-200 overflow-y-auto overflow-x-auto">
-            {Object.entries(groupedTickets).map(([parentKey, parentTickets]) => {
-              const parentTicket = getParentTicket(parentTickets);
-              const subTasks = getSubTasks(parentTickets);
-              const hasChildren = hasSubTasks(parentTickets);
-              const isParentExpanded = expandedParents.has(parentKey);
-
-              return (
-                <div key={parentKey}>
-                  {/* Parent Task Timeline Row */}
-                  <div className="flex hover:bg-gray-50 transition-colors" style={{ minHeight: '88px' }}>
-                    {monthsInRange.map((month, monthIndex) => (
-                      <div key={monthIndex} className="w-32 relative border-r border-gray-200 last:border-r-0 flex-shrink-0 flex items-center">
-                        {/* Timeline bar for this month */}
-                        {getMonthPosition(parentTicket.start_date, parentTicket.due_date, month) && (
-                          <div
-                            className={`absolute h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
-                            style={{
-                              left: `${getMonthPosition(parentTicket.start_date, parentTicket.due_date, month)?.left || 0}%`,
-                              width: `${getMonthPosition(parentTicket.start_date, parentTicket.due_date, month)?.width || 0}%`,
-                            }}
-                            title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
-                          />
-                        )}
-                        
-                        {/* Due date marker for this month */}
-                        {parentTicket.due_date && isDateInMonth(parentTicket.due_date, month) && (
-                          <div
-                            className="absolute w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"
-                            style={{
-                              left: `${getDueDatePosition(parentTicket.due_date, month)}%`,
-                              top: '50%',
-                              transform: 'translate(-50%, -50%)',
-                            }}
-                            title={`Due: ${format(parseISO(parentTicket.due_date), 'MMM dd, yyyy')}`}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Sub-tasks Timeline */}
-                  {hasChildren && isParentExpanded && subTasks.map((subTask) => (
-                    <div key={subTask.id} className="flex hover:bg-gray-50 transition-colors bg-gray-25" style={{ minHeight: '64px' }}>
                       {monthsInRange.map((month, monthIndex) => (
-                        <div key={monthIndex} className="w-32 relative border-r border-gray-200 last:border-r-0 flex-shrink-0 flex items-center">
+                        <div key={monthIndex} className="w-32 relative border-r border-gray-200 last:border-r-0 flex-shrink-0" style={{ height: '64px' }}>
                           {/* Sub-task timeline bar for this month */}
                           {getMonthPosition(subTask.start_date, subTask.due_date, month) && (
                             <div
-                              className={`absolute h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
+                              className={`absolute top-1/2 transform -translate-y-1/2 h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
                               style={{
                                 left: `${getMonthPosition(subTask.start_date, subTask.due_date, month)?.left || 0}%`,
                                 width: `${getMonthPosition(subTask.start_date, subTask.due_date, month)?.width || 0}%`,
@@ -448,11 +414,9 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                           {/* Due date marker for this month */}
                           {subTask.due_date && isDateInMonth(subTask.due_date, month) && (
                             <div
-                              className="absolute w-1.5 h-1.5 bg-red-500 rounded-full border border-white shadow-sm"
+                              className="absolute top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full border border-white shadow-sm"
                               style={{
                                 left: `${getDueDatePosition(subTask.due_date, month)}%`,
-                                top: '50%',
-                                transform: 'translate(-50%, -50%)',
                               }}
                               title={`Due: ${format(parseISO(subTask.due_date), 'MMM dd, yyyy')}`}
                             />
