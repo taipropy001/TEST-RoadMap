@@ -8,6 +8,11 @@ interface FilterPanelProps {
   onFiltersChange: (filters: RoadmapFilters) => void;
   savedRoadmaps: Roadmap[];
   onRoadmapsChange: () => void;
+  mockOptions?: {
+    statuses: string[];
+    assignees: string[];
+    labels: string[];
+  };
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -16,90 +21,23 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onFiltersChange,
   savedRoadmaps,
   onRoadmapsChange,
+  mockOptions,
 }) => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [roadmapName, setRoadmapName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-  const [allAssignees, setAllAssignees] = useState<string[]>([]);
-  const [allLabels, setAllLabels] = useState<string[]>([]);
-  const [allStatuses, setAllStatuses] = useState<string[]>([]);
+  const [allAssignees, setAllAssignees] = useState<string[]>(mockOptions?.assignees || []);
+  const [allLabels, setAllLabels] = useState<string[]>(mockOptions?.labels || []);
+  const [allStatuses, setAllStatuses] = useState<string[]>(mockOptions?.statuses || []);
 
   useEffect(() => {
-    loadJiraOptions();
+    if (mockOptions) {
+      setAllAssignees(mockOptions.assignees);
+      setAllLabels(mockOptions.labels);
+      setAllStatuses(mockOptions.statuses);
+    }
   }, []);
 
-  const loadJiraOptions = async () => {
-    const jiraConfig = localStorage.getItem('jira_config');
-    if (!jiraConfig) return;
-
-    setLoadingOptions(true);
-    try {
-
-      // Query for all assignees
-      loadStatuses();
-
-      // Query for all assignees
-      loadAssignees();
-
-      // Query for all labels
-      loadLabels();
-
-    } catch (error) {
-      console.error('Failed to load Jira options:', error);
-    } finally {
-      setLoadingOptions(false);
-    }
-  };
-
-  async function loadStatuses() {
-    const statusesUrl = `http://localhost:8000/statuses`;
-
-    const statusesResponse = await fetch(statusesUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (statusesResponse.ok) {
-      const statusesData = await statusesResponse.json();
-      setAllStatuses(statusesData);
-    }
-  }
-  
-
-  async function loadAssignees() {
-    const assigneesUrl = `http://localhost:8000/assignees`;
-
-    const assigneesResponse = await fetch(assigneesUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (assigneesResponse.ok) {
-      const assigneesData = await assigneesResponse.json();
-      setAllAssignees(assigneesData);
-    }
-  }
-  
-  async function loadLabels() {
-    const labelsUrl = `http://localhost:8000/labels`;
-
-    const labelsResponse = await fetch(labelsUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (labelsResponse.ok) {
-      const labelsData = await labelsResponse.json();
-      setAllLabels(labelsData);
-    }
-  }
 
   const saveRoadmap = async () => {
     if (!roadmapName.trim()) return;
@@ -189,9 +127,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         {/* Labels Filter */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Labels</h3>
-          {loadingOptions && (
-            <div className="text-xs text-gray-500 mb-2">Loading labels...</div>
-          )}
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allLabels.map((label) => (
               <label key={label} className="flex items-center space-x-2">
@@ -215,9 +150,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         {/* Assignees Filter */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Assignees</h3>
-          {loadingOptions && (
-            <div className="text-xs text-gray-500 mb-2">Loading assignees...</div>
-          )}
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {allAssignees.map((assignee) => (
               <label key={assignee} className="flex items-center space-x-2">
