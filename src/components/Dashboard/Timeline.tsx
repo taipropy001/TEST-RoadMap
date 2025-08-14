@@ -60,10 +60,10 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
   const getTicketPosition = (date: string | null) => {
     if (!date || typeof date !== 'string') return 0;
     try {
-      const ticketDate = parseISO(date);
+      const ticketDate = new Date(date);
       if (isNaN(ticketDate.getTime())) return 0;
       const daysDiff = differenceInDays(ticketDate, minDate);
-      return (daysDiff / totalDays) * 100;
+      return Math.max(0, (daysDiff / totalDays) * 100);
     } catch (error) {
       console.warn('Invalid date string:', date);
       return 0;
@@ -75,12 +75,12 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     if (!endDate || typeof endDate !== 'string') return 2; // Minimum width for milestones
     
     try {
-      const start = parseISO(startDate);
-      const end = parseISO(endDate);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 2;
       
       const duration = differenceInDays(end, start);
-      return Math.max((duration / totalDays) * 100, 2);
+      return Math.max((duration / totalDays) * 100, 1);
     } catch (error) {
       console.warn('Invalid date strings:', startDate, endDate);
       return 2;
@@ -315,10 +315,10 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                         <div
                           className={`absolute top-1/2 transform -translate-y-1/2 h-4 ${getStatusColor(parentTicket.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow`}
                           style={{
-                            left: `${getTicketPosition(parentTicket.start_date || parentTicket.created_date)}%`,
+                            left: `${getTicketPosition(parentTicket.start_date)}%`,
                             width: `${getTicketWidth(parentTicket.start_date, parentTicket.due_date)}%`,
                           }}
-                          title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStarted: ${parentTicket.start_date ? format(parseISO(parentTicket.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                          title={`${parentTicket.key}: ${parentTicket.summary}\nStatus: ${parentTicket.status}\nPriority: ${parentTicket.priority || 'None'}\nAssignee: ${parentTicket.assignee || 'Unassigned'}\nCreator: ${parentTicket.creator || 'Unknown'}\nStart: ${parentTicket.start_date ? format(new Date(parentTicket.start_date), 'MMM dd, yyyy') : 'Not set'}\nDue: ${parentTicket.due_date ? format(new Date(parentTicket.due_date), 'MMM dd, yyyy') : 'Not set'}`}
                         />
                       )}
                       
@@ -329,7 +329,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                           style={{
                             left: `${getTicketPosition(parentTicket.due_date)}%`,
                           }}
-                          title={`Due: ${format(parseISO(parentTicket.due_date), 'MMM dd, yyyy')}`}
+                          title={`Due: ${format(new Date(parentTicket.due_date), 'MMM dd, yyyy')}`}
                         />
                       )}
                     </div>
@@ -372,10 +372,10 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                           <div
                             className={`absolute top-1/2 transform -translate-y-1/2 h-3 ${getStatusColor(subTask.status)} rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow opacity-90`}
                             style={{
-                              left: `${getTicketPosition(subTask.start_date || subTask.created_date)}%`,
+                              left: `${getTicketPosition(subTask.start_date)}%`,
                               width: `${getTicketWidth(subTask.start_date, subTask.due_date)}%`,
                             }}
-                            title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nPriority: ${subTask.priority || 'None'}\nAssignee: ${subTask.assignee || 'Unassigned'}\nCreator: ${subTask.creator || 'Unknown'}\nStarted: ${subTask.start_date ? format(parseISO(subTask.start_date), 'MMM dd, yyyy') : 'Not started yet'}`}
+                            title={`${subTask.key}: ${subTask.summary}\nStatus: ${subTask.status}\nPriority: ${subTask.priority || 'None'}\nAssignee: ${subTask.assignee || 'Unassigned'}\nCreator: ${subTask.creator || 'Unknown'}\nStart: ${subTask.start_date ? format(new Date(subTask.start_date), 'MMM dd, yyyy') : 'Not set'}\nDue: ${subTask.due_date ? format(new Date(subTask.due_date), 'MMM dd, yyyy') : 'Not set'}`}
                           />
                         )}
                         
@@ -386,7 +386,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                             style={{
                               left: `${getTicketPosition(subTask.due_date)}%`,
                             }}
-                            title={`Due: ${format(parseISO(subTask.due_date), 'MMM dd, yyyy')}`}
+                            title={`Due: ${format(new Date(subTask.due_date), 'MMM dd, yyyy')}`}
                           />
                         )}
                       </div>
