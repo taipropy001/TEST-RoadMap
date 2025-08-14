@@ -214,7 +214,7 @@ const mockTickets: JiraTicket[] = [
     updated_date: '2024-04-25T14:00:00Z',
     due_date: '2024-05-31T17:00:00Z',
     parent_issue_key: 'PROJ-200'
-  }
+  },
   // Additional 2025-2026 tickets
   {
     id: '14',
