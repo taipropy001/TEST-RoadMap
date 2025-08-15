@@ -57,30 +57,41 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     currentMonth = addMonths(currentMonth, 1);
   }
 
-  const getTicketPosition = (date: string | null) => {
+  const getTicketPosition = (date: string | null): number => {
     if (!date || typeof date !== 'string') return 0;
     try {
       const ticketDate = new Date(date);
       if (isNaN(ticketDate.getTime())) return 0;
+      
+      // Ensure the date is within our timeline bounds
+      if (ticketDate < minDate) return 0;
+      if (ticketDate > maxDate) return 100;
+      
       const daysDiff = differenceInDays(ticketDate, minDate);
-      return Math.max(0, (daysDiff / totalDays) * 100);
+      const position = (daysDiff / totalDays) * 100;
+      return Math.max(0, Math.min(100, position));
     } catch (error) {
       console.warn('Invalid date string:', date);
       return 0;
     }
   };
 
-  const getTicketWidth = (startDate: string | null, endDate?: string | null) => {
+  const getTicketWidth = (startDate: string | null, endDate?: string | null): number => {
     if (!startDate || typeof startDate !== 'string') return 2;
-    if (!endDate || typeof endDate !== 'string') return 2; // Minimum width for milestones
+    if (!endDate || typeof endDate !== 'string') return 3; // Minimum width for milestones
     
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 2;
       
-      const duration = differenceInDays(end, start);
-      return Math.max((duration / totalDays) * 100, 1);
+      // Ensure dates are within bounds
+      const boundedStart = start < minDate ? minDate : start;
+      const boundedEnd = end > maxDate ? maxDate : end;
+      
+      const duration = differenceInDays(boundedEnd, boundedStart);
+      const width = (duration / totalDays) * 100;
+      return Math.max(width, 1);
     } catch (error) {
       console.warn('Invalid date strings:', startDate, endDate);
       return 2;
