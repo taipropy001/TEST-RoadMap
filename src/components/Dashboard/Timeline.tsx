@@ -40,14 +40,25 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
       if (typeof dateString !== 'string' || !dateString.trim()) return false;
       const date = new Date(dateString);
       return !isNaN(date.getTime());
-    });
+    })
+    .map(dateString => new Date(dateString));
 
+  // Debug: Log the dates we're working with
+  console.log('All valid dates:', allDates.map(d => d.toISOString()));
+  
   const minDate = allDates.length > 0 
-    ? startOfMonth(new Date(Math.min(...allDates.map(d => new Date(d).getTime()))))
+    ? startOfMonth(new Date(Math.min(...allDates.map(d => d.getTime()))))
     : startOfMonth(new Date());
   const maxDate = allDates.length > 0 
-    ? endOfMonth(new Date(Math.max(...allDates.map(d => new Date(d).getTime()))))
+    ? endOfMonth(new Date(Math.max(...allDates.map(d => d.getTime()))))
     : endOfMonth(addMonths(new Date(), 12));
+
+  // Debug: Log the calculated bounds
+  console.log('Timeline bounds:', {
+    minDate: minDate.toISOString(),
+    maxDate: maxDate.toISOString(),
+    totalDays
+  });
 
   const totalDays = differenceInDays(maxDate, minDate);
   
