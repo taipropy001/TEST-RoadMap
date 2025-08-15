@@ -33,7 +33,7 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
   }, {} as GroupedTickets);
 
   // Calculate timeline bounds using start_date instead of created_date
-  const allDates = tickets.flatMap(t => [t.start_date, t.due_date, t.created_date])
+  const allDates = tickets.flatMap(t => [t.start_date, t.due_date])
     .filter(Boolean) // Remove null/undefined values
     .filter(dateString => {
       // Ensure it's a string and can be parsed as a valid date
@@ -43,15 +43,17 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     });
 
   const minDate = allDates.length > 0 
-    ? startOfMonth(new Date(Math.min(...allDates.map(d => new Date(d).getTime())))) 
-    : new Date();
+    ? startOfMonth(new Date(Math.min(...allDates.map(d => new Date(d).getTime()))))
+    : startOfMonth(new Date());
   const maxDate = allDates.length > 0 
-    ? endOfMonth(new Date(Math.max(...allDates.map(d => new Date(d).getTime())))) 
-    : addMonths(new Date(), 6);
+    ? endOfMonth(new Date(Math.max(...allDates.map(d => new Date(d).getTime()))))
+    : endOfMonth(addMonths(new Date(), 12));
 
   const totalDays = differenceInDays(maxDate, minDate);
+  
+  // Generate months for the timeline header
   const monthsInRange = [];
-  let currentMonth = minDate;
+  let currentMonth = startOfMonth(minDate);
   while (currentMonth <= maxDate) {
     monthsInRange.push(currentMonth);
     currentMonth = addMonths(currentMonth, 1);
@@ -63,12 +65,10 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
       const ticketDate = new Date(date);
       if (isNaN(ticketDate.getTime())) return 0;
       
-      // Ensure the date is within our timeline bounds
-      if (ticketDate < minDate) return 0;
-      if (ticketDate > maxDate) return 100;
-      
       const daysDiff = differenceInDays(ticketDate, minDate);
       const position = (daysDiff / totalDays) * 100;
+      
+      // Clamp position between 0 and 100
       return Math.max(0, Math.min(100, position));
     } catch (error) {
       console.warn('Invalid date string:', date);
@@ -78,20 +78,16 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
 
   const getTicketWidth = (startDate: string | null, endDate?: string | null): number => {
     if (!startDate || typeof startDate !== 'string') return 2;
-    if (!endDate || typeof endDate !== 'string') return 3; // Minimum width for milestones
+    if (!endDate || typeof endDate !== 'string') return 2; // Minimum width for milestones
     
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 2;
       
-      // Ensure dates are within bounds
-      const boundedStart = start < minDate ? minDate : start;
-      const boundedEnd = end > maxDate ? maxDate : end;
-      
-      const duration = differenceInDays(boundedEnd, boundedStart);
+      const duration = differenceInDays(end, start);
       const width = (duration / totalDays) * 100;
-      return Math.max(width, 1);
+      return Math.max(2, width); // Minimum 2% width
     } catch (error) {
       console.warn('Invalid date strings:', startDate, endDate);
       return 2;
@@ -253,7 +249,8 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
                   {monthsInRange.map((month, index) => (
                     <div
                       key={index}
-                      className="flex-1 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 min-w-24"
+                      className="flex-1 px-4 py-4 text-center text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
+                      style={{ minWidth: `${100 / monthsInRange.length}%` }}
                     >
                       {format(month, 'MMM yyyy')}
                     </div>
