@@ -53,6 +53,8 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     ? endOfMonth(new Date(Math.max(...allDates.map(d => d.getTime()))))
     : endOfMonth(addMonths(new Date(), 12));
 
+  const totalDays = differenceInDays(maxDate, minDate);
+
   // Debug: Log the calculated bounds
   console.log('Timeline bounds:', {
     minDate: minDate.toISOString(),
@@ -60,7 +62,6 @@ export const Timeline: React.FC<TimelineProps> = ({ tickets, loading = false }) 
     totalDays
   });
 
-  const totalDays = differenceInDays(maxDate, minDate);
   
   // Generate months for the timeline header
   const monthsInRange = [];
